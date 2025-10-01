@@ -23,6 +23,8 @@ public class TrainConnection {
     public int secondClassRate;
     public Duration tripDuration;
 
+    public String getRouteID() { return routeID; }
+
     public TrainConnection() {
     }
 
