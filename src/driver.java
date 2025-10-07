@@ -1,131 +1,157 @@
-import java.util.List;
-import java.util.Comparator;
-import java.util.EnumSet;
+import java.util.*;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.time.DayOfWeek;
 import java.time.Duration;
-import java.time.LocalTime;
 
 public class driver {
+
+    private static final Scanner in = new Scanner(System.in);
+
     public static void main(String[] args) {
-        // 1) Load CSV
+        // Loading CSV
         String csv = (args.length > 0) ? args[0] : "eu_rail_network.csv";
         TrainConnection.loadTrainConnectionsFromCSV(csv);
 
-        // 2) Build graph from all loaded connections
-        TrainGraph g = new TrainGraph(TrainConnection.trainConnections); // directed
+        // Building the graph
+        TrainGraph g = new TrainGraph(TrainConnection.trainConnections);
 
-        // 3) Print the whole graph (direct connections only)
-        System.out.println(g);
+        // Main loop
+        while (true) {
+            System.out.println("\n=== RAIL PLANNER ===");
+            System.out.println("1) List available cities");
+            System.out.println("2) Plan a trip (≤ 2 connections)");
+            System.out.println("3) Quit");
+            System.out.print("Choose: ");
 
-        // 4) All paths Paris -> London (≤ 2 intermediates)
-        List<TrainGraph.PathResult> allPaths = g.pathsUpToTwoIntermediates("Paris", "London", e -> true);
-        System.out.printf("%nAll paths Paris -> London (≤2 intermediates): %d%n", allPaths.size());
-        allPaths.forEach(System.out::println);
+            int choice = readInt();
+                switch (choice) {
+                case 1 -> listCities(g);
+                case 2 -> planTripUI(g);  
+                case 3 -> {
+                        System.out.println("Goodbye!");
+                        return;
+                }
+                default -> System.out.println("Invalid choice.");
+                }
 
-        // 5) Example filtered search:
-        // Weekend only + train type RJX + first-class ≤ 120€ + depart after 12:00
-        Predicate<TrainConnection> weekend = e -> {
-            EnumSet<DayOfWeek> ops = DayFilters.parse(e.daysOfOperation);
-            return ops.contains(DayOfWeek.SATURDAY) || ops.contains(DayOfWeek.SUNDAY);
+        }
+    }
+
+    // UI Methods
+
+        private static void listCities(TrainGraph g) {
+        List<String> a = new ArrayList<>(g.getAllCities());
+        Collections.sort(a);
+        int w = a.stream().mapToInt(String::length).max().orElse(10) + 2;
+        int cols = Math.max(1, Math.min(8, 120 / w));         
+        int rows = (int)Math.ceil(a.size() / (double)cols);
+        System.out.println("\nAvailable cities (" + a.size() + "):");
+        for (int r = 0; r < rows; r++) {
+                for (int c = 0; c < cols; c++) {
+                int i = c * rows + r;
+                if (i < a.size()) System.out.printf("%-" + w + "s", a.get(i));
+                }
+                System.out.println();
+        }
+        }
+
+    private static void planTripUI(TrainGraph g) {
+        Set<String> cities = g.getAllCities();
+        if (cities.isEmpty()) {
+            System.out.println("Error. Couldn't load CSV.");
+            return;
+        }
+
+        System.out.println("\nType the FROM city (case-sensitive). Type '?' to list cities.");
+        String from = promptCity(cities, "FROM", g);
+
+        System.out.println("\nType the TO city (case-sensitive). Type '?' to list cities.");
+        String to = promptCity(cities, "TO", g);
+
+        Predicate<TrainConnection> any = e -> true;
+
+        List<TrainGraph.PathResult> base = g.pathsUpToTwoIntermediates(from, to, any);
+        if (base == null || base.isEmpty()) {
+            System.out.println("\nNo trips found with ≤ 2 connections from " + from + " to " + to + ".");
+            return;
+        }
+
+        boolean firstClass = false; // second class is default
+        List<TrainGraph.PathResult> current = new ArrayList<>(base);
+
+        //Inner User LOOP 
+        while (true) {
+    System.out.println("\n=== Trips " + from + " → " + to + " (≤2 connections) ===");
+    printPaths(current, firstClass);
+
+    System.out.println("\nOptions:");
+    System.out.println("1) Sort by total PRICE (" + (firstClass ? "FIRST" : "SECOND") + "-class)");
+    System.out.println("2) Sort by total DURATION");
+    System.out.println("3) Toggle price class (now " + (firstClass ? "FIRST" : "SECOND") + ")");
+    System.out.println("4) Back to main menu");
+    System.out.print("Choose: ");
+
+    int op = readInt();
+    switch (op) {
+        case 1 -> {
+        final boolean fc = firstClass;
+        Comparator<TrainGraph.PathResult> byPriceThenTime = (p1, p2) -> {
+                int price1 = p1.edges.stream().mapToInt(tc -> fc ? tc.firstClassRate : tc.secondClassRate).sum();
+                int price2 = p2.edges.stream().mapToInt(tc -> fc ? tc.firstClassRate : tc.secondClassRate).sum();
+                if (price1 != price2) return Integer.compare(price1, price2);
+                return p1.totalDuration.compareTo(p2.totalDuration);
         };
-        Predicate<TrainConnection> onlyRJX = e -> e.trainType != null && e.trainType.equalsIgnoreCase("RJX");
-        Predicate<TrainConnection> firstClassAtMost120 = e -> e.firstClassRate <= 120;
-        Predicate<TrainConnection> departAfterNoon = e -> e.departureTime != null
-                && e.departureTime.isAfter(LocalTime.NOON);
+        current.sort(byPriceThenTime);
+}
 
-        Predicate<TrainConnection> filter = weekend.and(onlyRJX).and(firstClassAtMost120).and(departAfterNoon);
-
-        List<TrainGraph.PathResult> filtered = g.pathsUpToTwoIntermediates("Paris", "London", filter);
-
-        System.out.printf("%nFiltered paths Paris -> London "
-                + "(weekend, RJX, 1st<=120€, depart>12:00): %d%n",
-                filtered.size());
-        filtered.forEach(System.out::println);
-
-        // 1) Max total duration (e.g., ≤ 6h)
-        Duration maxDur = Duration.ofHours(6);
-        List<TrainGraph.PathResult> fastOnly = allPaths.stream()
-                .filter(p -> p.totalDuration.compareTo(maxDur) <= 0)
-                .collect(Collectors.toList());
-        System.out.println("\nPaths with total duration ≤ 6h: " + fastOnly.size());
-        fastOnly.stream().limit(5).forEach(System.out::println);
-
-        // 2) Duration within a range (e.g., 3h–8h inclusive)
-        Duration minDur = Duration.ofHours(3);
-        Duration maxDur2 = Duration.ofHours(8);
-        List<TrainGraph.PathResult> midRange = allPaths.stream()
-                .filter(p -> p.totalDuration.compareTo(minDur) >= 0
-                        && p.totalDuration.compareTo(maxDur2) <= 0)
-                .collect(Collectors.toList());
-        System.out.println("\nPaths with total duration in [3h, 8h]: " + midRange.size());
-        midRange.stream().limit(5).forEach(System.out::println);
-
-        // 3) Cap on total SECOND-class cost (e.g., ≤ €150)
-        int secondCap = 150;
-        List<TrainGraph.PathResult> cheapSecond = allPaths.stream()
-                .filter(p -> totalSecondCost(p) <= secondCap)
-                .collect(Collectors.toList());
-        System.out.println("\nPaths with total second-class cost ≤ €150: " + cheapSecond.size());
-        cheapSecond.stream().limit(5).forEach(System.out::println);
-
-        // 4) Cap on total FIRST-class cost (e.g., ≤ €250)
-        int firstCap = 250;
-        List<TrainGraph.PathResult> cheapFirst = allPaths.stream()
-                .filter(p -> totalFirstCost(p) <= firstCap)
-                .collect(Collectors.toList());
-        System.out.println("\nPaths with total first-class cost ≤ €250: " + cheapFirst.size());
-        cheapFirst.stream().limit(5).forEach(System.out::println);
-
-        // 5) Top-K cheapest by SECOND-class cost (sorted)
-        int K = 5;
-        List<TrainGraph.PathResult> topKSecond = allPaths.stream()
-                .sorted(Comparator.comparingInt(driver::totalSecondCost))
-                .limit(K)
-                .collect(Collectors.toList());
-        System.out.println("\nTop " + K + " cheapest (second-class total):");
-        topKSecond.forEach(p -> System.out.printf("€%d | %s%n", totalSecondCost(p), p));
-
-        // 6) Cheapest SECOND-class, tie-break by duration
-        List<TrainGraph.PathResult> cheapestBySecondThenTime = allPaths.stream()
-                .sorted(Comparator
-                        .comparingInt(driver::totalSecondCost)
-                        .thenComparing(p -> p.totalDuration)) // shorter wins on ties
-                .limit(5)
-                .collect(Collectors.toList());
-        System.out.println("\nCheapest by second-class, tie-break by duration:");
-        cheapestBySecondThenTime.forEach(p -> System.out.printf("€%d | %dh%02dm | %s%n",
-                totalSecondCost(p),
-                p.totalDuration.toHours(),
-                p.totalDuration.toMinutesPart(),
-                p));
-
-        // 7) Combine edge-level filter + path-level constraint:
-        // Example: Weekend RJX only (edge-level) AND total second-class ≤ €150
-        // (path-level).
-        java.util.function.Predicate<TrainConnection> weekendRJX = e -> {
-            java.util.EnumSet<java.time.DayOfWeek> ops = DayFilters.parse(e.daysOfOperation);
-            return (ops.contains(java.time.DayOfWeek.SATURDAY) || ops.contains(java.time.DayOfWeek.SUNDAY))
-                    && e.trainType != null && e.trainType.equalsIgnoreCase("RJX");
-        };
-
-        List<TrainGraph.PathResult> weekendRJXPaths = g.pathsUpToTwoIntermediates("Paris", "London", weekendRJX);
-
-        List<TrainGraph.PathResult> weekendRJXUnder150 = weekendRJXPaths.stream()
-                .filter(p -> totalSecondCost(p) <= 150)
-                .collect(Collectors.toList());
-
-        System.out.println("\nWeekend RJX paths with total second-class ≤ €150: " + weekendRJXUnder150.size());
-        weekendRJXUnder150.forEach(System.out::println);
+        
+        case 3 -> firstClass = !firstClass;
+        case 4 -> { return; }
+        default -> System.out.println("Invalid choice.");
+    }
+}
 
     }
 
-    static int totalFirstCost(TrainGraph.PathResult p) {
-        return p.edges.stream().mapToInt(tc -> tc.firstClassRate).sum();
+    //Printing 
+
+
+private static void printPaths(List<TrainGraph.PathResult> paths, boolean firstClass) {
+    int i = 1;
+    for (TrainGraph.PathResult p : paths) {
+        System.out.printf("%d) %s%n", i++, p);  
+    }
+}
+
+
+
+
+    private static String promptCity(Set<String> cities, String label, TrainGraph g) {
+        while (true) {
+            System.out.print(label + ": ");
+            String s = in.nextLine().trim();
+            if (s.equals("?")) {
+                listCities(g);
+                continue;
+            }
+            if (!cities.contains(s)) {
+                System.out.println("Not found. Type '?' to list cities");
+                continue;
+            }
+            return s;
+        }
     }
 
-    static int totalSecondCost(TrainGraph.PathResult p) {
-        return p.edges.stream().mapToInt(tc -> tc.secondClassRate).sum();
+    private static int readInt() {
+        while (true) {
+            String s = in.nextLine().trim();
+            try {
+                return Integer.parseInt(s);
+            } catch (NumberFormatException e) {
+                System.out.print("Enter a number:  ");
+            }
+        }
+
+
+
     }
 }
