@@ -180,7 +180,7 @@ public class TrainGraph {
     }
 
     /** Paths between specific cities (1–3 edges) that satisfy a given Filter. */
-    public List<PathResult> pathsUpToTwoIntermediates(String from, String to, Predicate<TrainConnection> edgeFilter) {
+    public List<PathResult> pathsUpToTwoIntermediates(String from, String to, Predicate<TrainConnection> edgeFilter, Set<String> depDays, Set<String> typesTrain) {
         final int MAX_EDGES = 3;
         List<PathResult> out = new ArrayList<>();
         Deque<TrainConnection> path = new ArrayDeque<>();
@@ -194,6 +194,43 @@ public class TrainGraph {
         if (m != null) {
             List<PathResult> lst = m.get(to);
             if (lst != null) out.addAll(lst);
+        }
+        
+        return this.filterPathsUpToTwoIntermediates(out, depDays, typesTrain);
+    }
+
+    private List<PathResult> filterPathsUpToTwoIntermediates(List<PathResult> toFilter, Set<String> depDays, Set<String> typesTrain){
+        List<PathResult> out = new ArrayList<>();
+        for (PathResult result : toFilter){
+            List<TrainConnection> egdesList = result.edges;
+            TrainConnection tc = egdesList.get(0);
+            String s = tc.daysOfOperation;
+            String [] days = s.split(",");
+            boolean goodDay = false;
+            boolean goodType = true;
+            if(s.equals("Daily") || depDays.isEmpty()){
+                goodDay = true;
+            }
+            else{
+                for(String day: days){
+                    if(depDays.contains(day)){
+                        goodDay =true;
+                        break;
+                    }
+                }
+            }
+            for(TrainConnection tempTC : egdesList){
+                String tempType = tempTC.trainType;
+                if(!typesTrain.contains(tempType)){
+                    goodType=false;
+                }  
+            }
+            if(typesTrain.isEmpty()){
+                goodType = true;
+            }
+            if(goodType && goodDay){
+                out.add(result);
+            }
         }
         return out;
     }
