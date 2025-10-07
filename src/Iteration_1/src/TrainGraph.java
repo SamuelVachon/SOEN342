@@ -1,4 +1,6 @@
+package Iteration_1.src;
 import java.time.Duration;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -8,6 +10,12 @@ import java.util.stream.Collectors;
  * - Vertices: cities
  * - Edges: TrainConnection between departure city to arrival city
  * - Weight: tripDuration from departure city to arrival city
+ *
+ * Path totalDuration is computed using a real timeline:
+ *   - start at first edge's departure time (day 0)
+ *   - for each next edge, wait until its next available departure time
+ *     (same-day or rolled to a future day if needed), then add its tripDuration
+ *   - total = finalArrival - firstDeparture
  */
 public class TrainGraph {
 
@@ -74,7 +82,7 @@ public class TrainGraph {
 
     // ---------- Path enumeration (≤ 2 intermediates => ≤ 3 edges) ----------
 
-    /** Path record with edges and total duration precomputed. */
+    /** Path record with edges and total duration precomputed (with realistic waits). */
     public static class PathResult {
         public final String from;
         public final String to;
@@ -85,15 +93,44 @@ public class TrainGraph {
             this.from = from;
             this.to = to;
             this.edges = Collections.unmodifiableList(new ArrayList<>(edges));
-            Duration d = Duration.ZERO;
-            for (TrainConnection e : edges)
-                d = d.plus(e.tripDuration);
-            this.totalDuration = d;
+            this.totalDuration = computeTotalWithWaits(this.edges);
         }
 
         /** # of intermediate cities = edges - 1 (0..2) */
         public int intermediates() {
             return Math.max(0, edges.size() - 1);
+        }
+
+        private static Duration computeTotalWithWaits(List<TrainConnection> edges) {
+            if (edges.isEmpty()) return Duration.ZERO;
+
+            // Absolute minutes since day 0 midnight
+            long startAbs = minutesOfDay(edges.get(0).departureTime);
+            long curAbs = startAbs;
+
+            for (TrainConnection e : edges) {
+                int depMin = minutesOfDay(e.departureTime);
+
+                long depAbs = alignToNextOrSame(curAbs, depMin);
+
+                // Travel
+                long travel = e.tripDuration.toMinutes();
+                curAbs = depAbs + travel;
+            }
+
+            long totalMins = Math.max(0, curAbs - startAbs);
+            return Duration.ofMinutes(totalMins);
+        }
+
+        private static int minutesOfDay(LocalTime t) {
+            return t.getHour() * 60 + t.getMinute();
+        }
+
+        private static long alignToNextOrSame(long currentAbs, int targetMinOfDay) {
+            long day = currentAbs / 1440; // minutes in a day
+            long candidate = day * 1440 + targetMinOfDay;
+            while (candidate < currentAbs) candidate += 1440;
+            return candidate;
         }
 
         @Override
@@ -103,19 +140,27 @@ public class TrainGraph {
                         long mins = e.tripDuration.toMinutes();
                         long h = mins / 60, m = mins % 60;
                         return String.format(
-                                "%s→%s[%s %s→%s %dh%02dm]",
+                                "%s→%s[%s %s→%s %dh%02dm €%d/€%d]",
                                 e.departureCity, e.arrivalCity,
                                 e.getRouteID(), e.departureTime, e.arrivalTime,
-                                h, m);
+                                h, m,
+                                e.firstClassRate, e.secondClassRate);
                     })
                     .collect(Collectors.joining("  "));
 
             long totalMins = totalDuration.toMinutes();
             long th = totalMins / 60, tm = totalMins % 60;
 
+            // Also show total costs across the path
+            int totalFirst = 0, totalSecond = 0;
+            for (TrainConnection e : edges) {
+                totalFirst += e.firstClassRate;
+                totalSecond += e.secondClassRate;
+            }
+
             return String.format(
-                    "%s ⇒ %s | edges=%d, intermed=%d, total=%dh %02dm | %s",
-                    from, to, edges.size(), intermediates(), th, tm, hops);
+                    "%s ⇒ %s | edges=%d, intermed=%d, total=%dh %02dm | total €%d/€%d | %s",
+                    from, to, edges.size(), intermediates(), th, tm, totalFirst, totalSecond, hops);
         }
     }
 
@@ -160,7 +205,6 @@ public class TrainGraph {
         Set<String> visited = new HashSet<>();
         visited.add(from);
 
-        // tiny sink that only records when we reach `to`
         Map<String, Map<String, List<PathResult>>> sink = new HashMap<>();
         dfsCollectFiltered(from, from, MAX_EDGES, visited, path, edgeFilter, sink);
 
@@ -252,6 +296,7 @@ public class TrainGraph {
 
     /**
      * Convenience: best (shortest duration) path per pair within the same bound.
+     * (Uses totalDuration, which includes realistic waits.)
      */
     public Map<String, Map<String, PathResult>> fastestPathPerPairUpToTwoIntermediates() {
         Map<String, Map<String, List<PathResult>>> all = allPathsUpToTwoIntermediates();
@@ -289,12 +334,13 @@ public class TrainGraph {
                     long mins = tc.tripDuration.toMinutes();
                     long h = mins / 60, m = mins % 60;
                     sb.append(String.format(
-                            "%s -> %s | %s | Days:%s | %dh %02dm | route=%s%n",
+                            "%s -> %s | %s | Days:%s | %dh %02dm | €%d/€%d | route=%s%n",
                             tc.departureCity,
                             tc.arrivalCity,
                             tc.trainType,
                             tc.daysOfOperation,
                             h, m,
+                            tc.firstClassRate, tc.secondClassRate,
                             tc.getRouteID()));
                 }
             }
