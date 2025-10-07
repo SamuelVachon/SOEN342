@@ -7,6 +7,8 @@ import java.time.Duration;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 public class TrainConnection {
     public static ArrayList<TrainConnection> trainConnections = new ArrayList<>(100);
@@ -48,7 +50,7 @@ public class TrainConnection {
                 tc.arrivalTime = LocalTime.parse(cleanTime(cols.get(4)), formatter);
                 tc.arrivalDayOffset = extractDayOffset(cols.get(4));
                 tc.trainType = cols.get(5).trim();
-                tc.daysOfOperation = cols.get(6).trim();
+                tc.daysOfOperation = loadDays(cols.get(6).trim());
                 tc.firstClassRate = Integer.parseInt(cols.get(7).trim());
                 tc.secondClassRate = Integer.parseInt(cols.get(8).trim());
 
@@ -60,6 +62,77 @@ public class TrainConnection {
         } catch (IOException e) {
             throw new RuntimeException("Failed to read CSV: " + e.getMessage(), e);
         }
+    }
+
+    private static String loadDays(String str){
+        if(str.equals("Daily")){
+            return str;
+        }
+        if(str.contains(",")){
+            return str;
+        }
+        String depDays = "";
+        String[] s = str.split("-");
+        String[] days = {"Mon", "Tue", "Wed", "Thu", "Fri","Sat", "Sun"};
+        int i1=0;
+        int i2=0;
+        switch (s[0]) {
+            case "Mon":
+            i1 = 0;
+            break;
+            case "Tue":
+            i1 = 1;
+            break;
+            case "Wed":
+            i1 = 2;
+            break;
+            case "Thu":
+            i1 = 3;
+            break;
+            case "Fri":
+            i1 = 4;
+            break;
+            case "Sat":
+            i1 = 5;
+            break;
+            case "Sun":
+            i1 = 6;
+            break;
+        
+            default:
+                break;
+        }
+        switch (s[1]) {
+            case "Mon":
+            i2 = 0;
+            break;
+            case "Tue":
+            i2 = 1;
+            break;
+            case "Wed":
+            i2 = 2;
+            break;
+            case "Thu":
+            i2 = 3;
+            break;
+            case "Fri":
+            i2 = 4;
+            break;
+            case "Sat":
+            i2 = 5;
+            break;
+            case "Sun":
+            i2 = 6;
+            break;
+        
+            default:
+                break;
+        }
+        for(int i=i1;i<i2;i++){
+            depDays+=days[i]+",";
+        }
+        depDays+=days[i2];
+        return depDays;
     }
 
     @Override
@@ -125,5 +198,13 @@ public class TrainConnection {
         }
         out.add(sb.toString());
         return out;
+    }
+
+    public static Set<String> getTrainTypes(){
+        Set<String> trainTypes = new HashSet<String>();
+        for (TrainConnection trainConnection : trainConnections){
+            trainTypes.add(trainConnection.trainType);
+        }
+        return trainTypes;
     }
 }
