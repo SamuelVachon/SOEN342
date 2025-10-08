@@ -1,3 +1,4 @@
+// TrainGraph.java
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.*;
@@ -30,8 +31,8 @@ public class TrainGraph {
     /** Add a single directed edge */
     private void addEdge(TrainConnection tc) {
         graph.computeIfAbsent(tc.departureCity, k -> new HashMap<>())
-                .computeIfAbsent(tc.arrivalCity, k -> new ArrayList<>())
-                .add(tc);
+             .computeIfAbsent(tc.arrivalCity, k -> new ArrayList<>())
+             .add(tc);
     }
 
     /** All cities that appear as departure or arrival. */
@@ -46,8 +47,7 @@ public class TrainGraph {
     /** Direct connections list from -> to (may be empty). */
     public List<TrainConnection> getConnections(String from, String to) {
         Map<String, List<TrainConnection>> m = graph.get(from);
-        if (m == null)
-            return Collections.emptyList();
+        if (m == null) return Collections.emptyList();
         List<TrainConnection> lst = m.get(to);
         return (lst == null) ? Collections.emptyList() : Collections.unmodifiableList(lst);
     }
@@ -55,11 +55,9 @@ public class TrainGraph {
     /** All outgoing connections from a city. */
     public List<TrainConnection> getConnectionsFrom(String from) {
         Map<String, List<TrainConnection>> m = graph.get(from);
-        if (m == null)
-            return Collections.emptyList();
+        if (m == null) return Collections.emptyList();
         List<TrainConnection> all = new ArrayList<>();
-        for (List<TrainConnection> lst : m.values())
-            all.addAll(lst);
+        for (List<TrainConnection> lst : m.values()) all.addAll(lst);
         return Collections.unmodifiableList(all);
     }
 
@@ -73,8 +71,7 @@ public class TrainGraph {
     public int edgeCount() {
         int sum = 0;
         for (Map<String, List<TrainConnection>> m : graph.values()) {
-            for (List<TrainConnection> lst : m.values())
-                sum += lst.size();
+            for (List<TrainConnection> lst : m.values()) sum += lst.size();
         }
         return sum;
     }
@@ -96,27 +93,20 @@ public class TrainGraph {
         }
 
         /** # of intermediate cities = edges - 1 (0..2) */
-        public int intermediates() {
-            return Math.max(0, edges.size() - 1);
-        }
+        public int intermediates() { return Math.max(0, edges.size() - 1); }
 
         private static Duration computeTotalWithWaits(List<TrainConnection> edges) {
             if (edges.isEmpty()) return Duration.ZERO;
 
-            // Absolute minutes since day 0 midnight
             long startAbs = minutesOfDay(edges.get(0).departureTime);
             long curAbs = startAbs;
 
             for (TrainConnection e : edges) {
                 int depMin = minutesOfDay(e.departureTime);
-
                 long depAbs = alignToNextOrSame(curAbs, depMin);
-
-                // Travel
                 long travel = e.tripDuration.toMinutes();
                 curAbs = depAbs + travel;
             }
-
             long totalMins = Math.max(0, curAbs - startAbs);
             return Duration.ofMinutes(totalMins);
         }
@@ -150,7 +140,6 @@ public class TrainGraph {
             long totalMins = totalDuration.toMinutes();
             long th = totalMins / 60, tm = totalMins % 60;
 
-            // Also show total costs across the path
             int totalFirst = 0, totalSecond = 0;
             for (TrainConnection e : edges) {
                 totalFirst += e.firstClassRate;
@@ -163,15 +152,10 @@ public class TrainGraph {
         }
     }
 
-    /**
-     * Enumerate ALL simple paths between ALL pairs (from -> to) with at most 3
-     * edges (≤ 2 intermediates).
-     * Returns nested map: fromCity -> toCity -> list of PathResult.
-     */
+    /** Enumerate ALL simple paths between ALL pairs (from -> to) with ≤ 3 edges. */
     public Map<String, Map<String, List<PathResult>>> allPathsUpToTwoIntermediates() {
         final int MAX_EDGES = 3;
         Map<String, Map<String, List<PathResult>>> result = new HashMap<>();
-
         for (String source : getAllCities()) {
             Deque<TrainConnection> path = new ArrayDeque<>();
             Set<String> visited = new HashSet<>();
@@ -186,7 +170,6 @@ public class TrainGraph {
             Predicate<TrainConnection> edgeFilter) {
         final int MAX_EDGES = 3;
         Map<String, Map<String, List<PathResult>>> result = new HashMap<>();
-
         for (String source : getAllCities()) {
             Deque<TrainConnection> path = new ArrayDeque<>();
             Set<String> visited = new HashSet<>();
@@ -197,7 +180,7 @@ public class TrainGraph {
     }
 
     /** Paths between specific cities (1–3 edges) that satisfy a given Filter. */
-    public List<PathResult> pathsUpToTwoIntermediates(String from, String to, Predicate<TrainConnection> edgeFilter, Set<String> depDays, Set<String> typesTrain) {
+    public List<PathResult> pathsUpToTwoIntermediates(String from, String to, Predicate<TrainConnection> edgeFilter) {
         final int MAX_EDGES = 3;
         List<PathResult> out = new ArrayList<>();
         Deque<TrainConnection> path = new ArrayDeque<>();
@@ -210,78 +193,36 @@ public class TrainGraph {
         Map<String, List<PathResult>> m = sink.get(from);
         if (m != null) {
             List<PathResult> lst = m.get(to);
-            if (lst != null)
-                out.addAll(lst);
-        }
-        
-        return this.filterPathsUpToTwoIntermediates(out, depDays, typesTrain);
-    }
-
-    private List<PathResult> filterPathsUpToTwoIntermediates(List<PathResult> toFilter, Set<String> depDays, Set<String> typesTrain){
-        List<PathResult> out = new ArrayList<>();
-        for (PathResult result : toFilter){
-            List<TrainConnection> egdesList = result.edges;
-            TrainConnection tc = egdesList.get(0);
-            String s = tc.daysOfOperation;
-            String [] days = s.split(",");
-            boolean goodDay = false;
-            boolean goodType = true;
-            if(s.equals("Daily") || depDays.isEmpty()){
-                goodDay = true;
-            }
-            else{
-                for(String day: days){
-                    if(depDays.contains(day)){
-                        goodDay =true;
-                        break;
-                    }
-                }
-            }
-            for(TrainConnection tempTC : egdesList){
-                String tempType = tempTC.trainType;
-                if(!typesTrain.contains(tempType)){
-                    goodType=false;
-                }  
-            }
-            if(typesTrain.isEmpty()){
-                goodType = true;
-            }
-            if(goodType && goodDay){
-                out.add(result);
-            }
+            if (lst != null) out.addAll(lst);
         }
         return out;
     }
 
     private void dfsCollectFiltered(String origin,
-            String currentCity,
-            int edgesRemaining,
-            Set<String> visitedCities,
-            Deque<TrainConnection> path,
-            Predicate<TrainConnection> edgeFilter,
-            Map<String, Map<String, List<PathResult>>> sink) {
-        if (edgesRemaining == 0)
-            return;
+                                    String currentCity,
+                                    int edgesRemaining,
+                                    Set<String> visitedCities,
+                                    Deque<TrainConnection> path,
+                                    Predicate<TrainConnection> edgeFilter,
+                                    Map<String, Map<String, List<PathResult>>> sink) {
+        if (edgesRemaining == 0) return;
 
         Map<String, List<TrainConnection>> adj = graph.get(currentCity);
-        if (adj == null)
-            return;
+        if (adj == null) return;
 
         for (Map.Entry<String, List<TrainConnection>> e : adj.entrySet()) {
             String nextCity = e.getKey();
-            if (visitedCities.contains(nextCity))
-                continue;
+            if (visitedCities.contains(nextCity)) continue;
 
             for (TrainConnection edge : e.getValue()) {
-                if (!edgeFilter.test(edge))
-                    continue;
+                if (!edgeFilter.test(edge)) continue;
 
                 path.addLast(edge);
                 visitedCities.add(nextCity);
 
                 sink.computeIfAbsent(origin, k -> new HashMap<>())
-                        .computeIfAbsent(nextCity, k -> new ArrayList<>())
-                        .add(new PathResult(origin, nextCity, new ArrayList<>(path)));
+                    .computeIfAbsent(nextCity, k -> new ArrayList<>())
+                    .add(new PathResult(origin, nextCity, new ArrayList<>(path)));
 
                 dfsCollectFiltered(origin, nextCity, edgesRemaining - 1, visitedCities, path, edgeFilter, sink);
 
@@ -292,48 +233,37 @@ public class TrainGraph {
     }
 
     private void dfsCollect(String origin,
-            String currentCity,
-            int edgesRemaining,
-            Set<String> visitedCities,
-            Deque<TrainConnection> path,
-            Map<String, Map<String, List<PathResult>>> sink) {
-        if (edgesRemaining == 0)
-            return;
+                            String currentCity,
+                            int edgesRemaining,
+                            Set<String> visitedCities,
+                            Deque<TrainConnection> path,
+                            Map<String, Map<String, List<PathResult>>> sink) {
+        if (edgesRemaining == 0) return;
 
-        // iterate all outgoing edges
         Map<String, List<TrainConnection>> m = graph.get(currentCity);
-        if (m == null)
-            return;
+        if (m == null) return;
 
         for (Map.Entry<String, List<TrainConnection>> entry : m.entrySet()) {
             String nextCity = entry.getKey();
-            if (visitedCities.contains(nextCity))
-                continue;
+            if (visitedCities.contains(nextCity)) continue;
 
             for (TrainConnection edge : entry.getValue()) {
-                // take edge
                 path.addLast(edge);
                 visitedCities.add(nextCity);
 
-                // record this path (length >= 1)
                 sink.computeIfAbsent(origin, k -> new HashMap<>())
-                        .computeIfAbsent(nextCity, k -> new ArrayList<>())
-                        .add(new PathResult(origin, nextCity, new ArrayList<>(path)));
+                    .computeIfAbsent(nextCity, k -> new ArrayList<>())
+                    .add(new PathResult(origin, nextCity, new ArrayList<>(path)));
 
-                // go deeper
                 dfsCollect(origin, nextCity, edgesRemaining - 1, visitedCities, path, sink);
 
-                // backtrack
                 visitedCities.remove(nextCity);
                 path.removeLast();
             }
         }
     }
 
-    /**
-     * Convenience: best (shortest duration) path per pair within the same bound.
-     * (Uses totalDuration, which includes realistic waits.)
-     */
+    /** Best (shortest duration) path per pair within the same bound. */
     public Map<String, Map<String, PathResult>> fastestPathPerPairUpToTwoIntermediates() {
         Map<String, Map<String, List<PathResult>>> all = allPathsUpToTwoIntermediates();
         Map<String, Map<String, PathResult>> best = new HashMap<>();
@@ -354,9 +284,7 @@ public class TrainGraph {
 
     // ---------- String rendering ----------
 
-    private int cityCount() {
-        return getAllCities().size();
-    }
+    private int cityCount() { return getAllCities().size(); }
 
     @Override
     public String toString() {

@@ -1,134 +1,137 @@
+import java.time.DayOfWeek;
 import java.util.*;
 import java.util.function.Predicate;
 
 public class driver {
-
     private static final Scanner in = new Scanner(System.in);
 
     public static void main(String[] args) {
-        // Loading CSV
         String csv = (args.length > 0) ? args[0] : "eu_rail_network.csv";
         TrainConnection.loadTrainConnectionsFromCSV(csv);
-
-        // Building the graph
         TrainGraph g = new TrainGraph(TrainConnection.trainConnections);
 
-        // Main loop
         while (true) {
             System.out.println("\n=== RAIL PLANNER ===");
             System.out.println("1) List available cities");
             System.out.println("2) Plan a trip (≤ 2 connections)");
             System.out.println("3) Quit");
             System.out.print("Choose: ");
-
             int choice = readInt();
-                switch (choice) {
-                case 1 -> listCities(g);
-                case 2 -> planTripUI(g);  
-                case 3 -> {
-                        System.out.println("Goodbye!");
-                        return;
-                }
-                default -> System.out.println("Invalid choice.");
-                }
-
+            switch (choice) {
+                case 1:
+                    listCities(g);
+                    break;
+                case 2:
+                    planTripUI(g);
+                    break;
+                case 3:
+                    System.out.println("Goodbye!");
+                    return;
+                default:
+                    System.out.println("Invalid choice.");
+            }
         }
     }
 
-    // UI Methods
+    private static void listCities(TrainGraph g) {
+        ArrayList<String> cities = new ArrayList<>(g.getAllCities());
+        Collections.sort(cities);
 
-        private static void listCities(TrainGraph g) {
-        List<String> a = new ArrayList<>(g.getAllCities());
-        Collections.sort(a);
-        int w = a.stream().mapToInt(String::length).max().orElse(10) + 2;
-        int cols = Math.max(1, Math.min(8, 120 / w));         
-        int rows = (int)Math.ceil(a.size() / (double)cols);
-        System.out.println("\nAvailable cities (" + a.size() + "):");
+        int colWidth = cities.stream().mapToInt(String::length).max().orElse(10) + 2;
+        int cols = Math.max(1, Math.min(8, 120 / colWidth));
+        int rows = (int) Math.ceil((double) cities.size() / (double) cols);
+
+        System.out.println("\nAvailable cities (" + cities.size() + "):");
         for (int r = 0; r < rows; r++) {
-                for (int c = 0; c < cols; c++) {
-                int i = c * rows + r;
-                if (i < a.size()) System.out.printf("%-" + w + "s", a.get(i));
+            for (int c = 0; c < cols; c++) {
+                int idx = c * rows + r;
+                if (idx < cities.size()) {
+                    System.out.printf("%-" + colWidth + "s", cities.get(idx));
                 }
-                System.out.println();
+            }
+            System.out.println();
         }
-        }
+    }
 
     private static void planTripUI(TrainGraph g) {
-        Set<String> cities = g.getAllCities();
-        if (cities.isEmpty()) {
+        Set<String> all = g.getAllCities();
+        if (all.isEmpty()) {
             System.out.println("Error. Couldn't load CSV.");
             return;
         }
 
         System.out.println("\nType the FROM city (case-sensitive). Type '?' to list cities.");
-        String from = promptCity(cities, "FROM", g);
+        String from = promptCity(all, "FROM", g);
 
         System.out.println("\nType the TO city (case-sensitive). Type '?' to list cities.");
-        String to = promptCity(cities, "TO", g);
+        String to = promptCity(all, "TO", g);
 
-        System.out.println("\nType the type of trains to travel on (case-sensitive). Type '?' to list the type of trains availible. Type \"all\" for all types and '?' for a list of types. Format: \"TGV,ICE,RJX\"");
-        Set<String> typeTrains = promptTypeTrains();
+        System.out.println("\nType the type of trains to travel on (case-sensitive).");
+        System.out.println("Type 'all' for any type, or '?' to list available types. Example: TGV,ICE,RJX");
+        Set<String> typesSelected = promptTypeTrains();           // empty set => no type restriction
 
-        System.out.println("\nType the departure day (case-sensitive). Type \"all\" for any day. Format: \"mon,tue\"");
-        Set<String> depDays = promptDays();
+        System.out.println("\nType the departure day(s).");
+        System.out.println("Type 'all' for any day. Example: Mon,Tue or Fri-Sun");
+        EnumSet<DayOfWeek> daysSelected = promptDays();           // empty set => no day restriction
 
-        Predicate<TrainConnection> any = e -> true;
+        // Build one predicate that enforces both day and train-type constraints
+        Predicate<TrainConnection> predicate = (tc) -> {
+            boolean typeOK = typesSelected.isEmpty() || typesSelected.contains(tc.trainType);
+            boolean dayOK  = daysSelected.isEmpty() || runsOnAny(tc, daysSelected);
+            return typeOK && dayOK;
+        };
 
-        List<TrainGraph.PathResult> base = g.pathsUpToTwoIntermediates(from, to, any,depDays,typeTrains);
-        if (base == null || base.isEmpty()) {
+        List<TrainGraph.PathResult> paths = g.pathsUpToTwoIntermediates(from, to, predicate);
+
+        if (paths == null || paths.isEmpty()) {
             System.out.println("\nNo trips found with ≤ 2 connections from " + from + " to " + to + ".");
             return;
         }
 
-        boolean firstClass = false; // second class is default
-        List<TrainGraph.PathResult> current = new ArrayList<>(base);
+        boolean useFirstClass = false; // default sort by 2nd-class price
+        List<TrainGraph.PathResult> shown = new ArrayList<>(paths);
 
-        //Inner User LOOP 
         while (true) {
-    System.out.println("\n=== Trips " + from + " → " + to + " (≤2 connections) ===");
-    printPaths(current, firstClass);
+            System.out.println("\n=== Trips " + from + " → " + to + " (≤2 connections) ===");
+            printPaths(shown, useFirstClass);
 
-    System.out.println("\nOptions:");
-    System.out.println("1) Sort by total PRICE (" + (firstClass ? "FIRST" : "SECOND") + "-class)");
-    System.out.println("2) Sort by total DURATION");
-    System.out.println("3) Toggle price class (now " + (firstClass ? "FIRST" : "SECOND") + ")");
-    System.out.println("4) Back to main menu");
-    System.out.print("Choose: ");
+            System.out.println("\nOptions:");
+            System.out.println("1) Sort by total PRICE (" + (useFirstClass ? "FIRST" : "SECOND") + "-class)");
+            System.out.println("2) Sort by total DURATION");
+            System.out.println("3) Toggle price class (now " + (useFirstClass ? "FIRST" : "SECOND") + ")");
+            System.out.println("4) Back to main menu");
+            System.out.print("Choose: ");
 
-    int op = readInt();
-    switch (op) {
-        case 1 -> {
-        final boolean fc = firstClass;
-        Comparator<TrainGraph.PathResult> byPriceThenTime = (p1, p2) -> {
-                int price1 = p1.edges.stream().mapToInt(tc -> fc ? tc.firstClassRate : tc.secondClassRate).sum();
-                int price2 = p2.edges.stream().mapToInt(tc -> fc ? tc.firstClassRate : tc.secondClassRate).sum();
-                if (price1 != price2) return Integer.compare(price1, price2);
-                return p1.totalDuration.compareTo(p2.totalDuration);
-        };
-        current.sort(byPriceThenTime);
-}
-
-        
-        case 3 -> firstClass = !firstClass;
-        case 4 -> { return; }
-        default -> System.out.println("Invalid choice.");
+            int opt = readInt();
+            switch (opt) {
+                case 1: {
+                    final boolean sortFirstClass = useFirstClass; // capture as effectively final
+                    Comparator<TrainGraph.PathResult> cmp = Comparator
+                            .comparingInt((TrainGraph.PathResult p) -> sumPrice(p, sortFirstClass))
+                            .thenComparing((TrainGraph.PathResult p) -> p.totalDuration);
+                    shown.sort(cmp);
+                    break;
+                }
+                case 2:
+                    shown.sort(Comparator.comparing((TrainGraph.PathResult pr) -> pr.totalDuration));
+                    break;
+                case 3:
+                    useFirstClass = !useFirstClass;
+                    break;
+                case 4:
+                    return;
+                default:
+                    System.out.println("Invalid choice.");
+            }
+        }
     }
-}
 
+    private static void printPaths(List<TrainGraph.PathResult> list, boolean firstClass) {
+        int i = 1;
+        for (TrainGraph.PathResult pr : list) {
+            System.out.printf("%d) %s%n", i++, pr);
+        }
     }
-
-    //Printing 
-
-
-private static void printPaths(List<TrainGraph.PathResult> paths, boolean firstClass) {
-    int i = 1;
-    for (TrainGraph.PathResult p : paths) {
-        System.out.printf("%d) %s%n", i++, p);  
-    }
-}
-
-
-
 
     private static String promptCity(Set<String> cities, String label, TrainGraph g) {
         while (true) {
@@ -136,13 +139,11 @@ private static void printPaths(List<TrainGraph.PathResult> paths, boolean firstC
             String s = in.nextLine().trim();
             if (s.equals("?")) {
                 listCities(g);
-                continue;
-            }
-            if (!cities.contains(s)) {
+            } else if (cities.contains(s)) {
+                return s;
+            } else {
                 System.out.println("Not found. Type '?' to list cities");
-                continue;
             }
-            return s;
         }
     }
 
@@ -155,78 +156,134 @@ private static void printPaths(List<TrainGraph.PathResult> paths, boolean firstC
                 System.out.print("Enter a number:  ");
             }
         }
-
-
-
     }
 
-    private static Set<String> promptTypeTrains(){
-        Set<String> types = TrainConnection.getTrainTypes();
-        Set<String> setTrain = new HashSet<>();
-        boolean todo = true;
-        while(todo){
+    private static Set<String> promptTypeTrains() {
+        Set<String> available = TrainConnection.getTrainTypes();
+        Set<String> chosen = new HashSet<>();
+        boolean needInput = true;
+
+        while (needInput) {
             System.out.print("Type of train: ");
             String s = in.nextLine().trim();
-            if (s.equals("?")){
-                for(String str: types){
-                    System.out.print(str + ", ");
-                }
+            if (s.equals("?")) {
+                for (String t : available) System.out.print(t + (", "));
+                System.out.println();
                 continue;
             }
-
-            if (s.equals("all")){
-                todo = false;
-                setTrain.clear();
+            if (s.equalsIgnoreCase("all")) {
+                chosen.clear(); // empty means "no restriction"
                 break;
             }
 
-            String[] temp = s.split(",");
-            
-            for (String str : temp){
-                if(types.contains(str)){
-                    setTrain.add(str);
-                    todo = false;
-                }
-                else{
-                    System.out.println(str+" is not a type of train available. Enter '?' for the type of trains available.");
-                    todo = true;
-                    setTrain.clear();
+            String[] toks = s.split(",");
+            chosen.clear();
+            needInput = false;
+            for (String tok : toks) {
+                String t = tok.trim();
+                if (!available.contains(t)) {
+                    System.out.println(t + " is not a type of train available. Enter '?' to list available types.");
+                    needInput = true;
+                    chosen.clear();
                     break;
                 }
+                chosen.add(t);
             }
         }
-        return setTrain;
+        return chosen;
     }
 
-    private static Set<String> promptDays(){
-        Set<String> days = Set.of("Mon", "Tue", "Wed", "Thu", "Fri","Sat", "Sun");
-        Set<String> depDays = new HashSet<>();
-        boolean todo = true;
-
-        while(todo){
+    private static EnumSet<DayOfWeek> promptDays() {
+        while (true) {
             System.out.print("Departure days: ");
             String s = in.nextLine().trim();
-
-            if (s.equals("all")){
-                depDays.clear();
-                break;
+            if (s.equalsIgnoreCase("all")) {
+                return EnumSet.noneOf(DayOfWeek.class); // empty => no restriction
             }
-
-            String[] temp = s.split(",");
-
-            for(String str : temp){
-                if (days.contains(str)){
-                    depDays.add(str);
-                    todo = false;
-                }
-                else{
-                    System.out.println("Only days of the week in format \"mon,tue,sat\" are accepted. Enter \"all\" for any departure day.");
-                    depDays.clear();
-                    todo = true;
-                    break;
-                }
+            try {
+                return parseDaysSpec(s);
+            } catch (IllegalArgumentException ex) {
+                System.out.println("Use comma-separated days like 'Mon,Wed' or ranges like 'Fri-Sun', or 'all'.");
             }
         }
-        return depDays;
+    }
+
+    // ---------- Price helper ----------
+    private static int sumPrice(TrainGraph.PathResult p, boolean firstClass) {
+        int sum = 0;
+        for (TrainConnection e : p.edges) {
+            sum += firstClass ? e.firstClassRate : e.secondClassRate;
+        }
+        return sum;
+    }
+
+    // ---------- Day filtering helpers ----------
+    private static boolean runsOnAny(TrainConnection tc, EnumSet<DayOfWeek> selected) {
+        if (selected == null || selected.isEmpty()) return true; // no restriction
+        EnumSet<DayOfWeek> op = operatingDays(tc.daysOfOperation);
+        for (DayOfWeek d : selected) if (op.contains(d)) return true;
+        return false;
+    }
+
+    private static EnumSet<DayOfWeek> operatingDays(String spec) {
+        String s = spec.replace("\"", "").trim();
+        if (s.equalsIgnoreCase("Daily")) return EnumSet.allOf(DayOfWeek.class);
+
+        if (s.contains(",") && !s.contains("-")) { // "Mon,Wed,Fri"
+            EnumSet<DayOfWeek> set = EnumSet.noneOf(DayOfWeek.class);
+            for (String tok : s.split(",")) set.add(tokenToDay(tok.trim()));
+            return set;
+        }
+        if (s.contains("-")) { // "Fri-Sun" (wrap OK)
+            return daysRange(s);
+        }
+        // Single day like "Mon"
+        return EnumSet.of(tokenToDay(s));
+    }
+
+    private static EnumSet<DayOfWeek> daysRange(String range) {
+        String[] parts = range.split("-");
+        DayOfWeek start = tokenToDay(parts[0].trim());
+        DayOfWeek end   = tokenToDay(parts[1].trim());
+        EnumSet<DayOfWeek> set = EnumSet.noneOf(DayOfWeek.class);
+        int i = start.getValue(); // 1..7
+        while (true) {
+            set.add(DayOfWeek.of(i));
+            if (i == end.getValue()) break;
+            i = i % 7 + 1; // wrap
+        }
+        return set;
+    }
+
+    private static DayOfWeek tokenToDay(String t) {
+        String k = t.substring(0, Math.min(3, t.length())).toLowerCase(Locale.ROOT);
+        switch (k) {
+            case "mon": return DayOfWeek.MONDAY;
+            case "tue": return DayOfWeek.TUESDAY;
+            case "wed": return DayOfWeek.WEDNESDAY;
+            case "thu": return DayOfWeek.THURSDAY;
+            case "fri": return DayOfWeek.FRIDAY;
+            case "sat": return DayOfWeek.SATURDAY;
+            case "sun": return DayOfWeek.SUNDAY;
+            default: throw new IllegalArgumentException("Bad day token: " + t);
+        }
+    }
+
+    private static EnumSet<DayOfWeek> parseDaysSpec(String s) {
+        s = s.replace("\"", "").trim();
+        if (s.isEmpty()) return EnumSet.noneOf(DayOfWeek.class);
+
+        // support "Mon,Wed" (commas), "Fri-Sun" (range), or combo like "Mon,Thu-Fri"
+        EnumSet<DayOfWeek> out = EnumSet.noneOf(DayOfWeek.class);
+        for (String part : s.split(",")) {
+            String p = part.trim();
+            if (p.isEmpty()) continue;
+            if (p.contains("-")) {
+                out.addAll(daysRange(p));
+            } else {
+                out.add(tokenToDay(p));
+            }
+        }
+        return out;
     }
 }

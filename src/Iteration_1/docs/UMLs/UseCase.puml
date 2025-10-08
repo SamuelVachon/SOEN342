@@ -1,0 +1,30 @@
+@startuml use case diagram
+left to right direction
+actor Passenger as User
+
+rectangle "Rail Planner (CLI)" {
+  usecase "Load CSV Network\n(at startup)" as UC_Load
+  usecase "List Available Cities" as UC_List
+  usecase "Plan Trip (≤ 2 connections)" as UC_Plan
+  usecase "Filter by Train Type(s)" as UC_FilterType
+  usecase "Filter by Operating Day(s)" as UC_FilterDay
+  usecase "Sort by Total Duration" as UC_SortDur
+  usecase "Sort by Total Price\n(First/Second class)" as UC_SortPrice
+  usecase "Toggle Price Class" as UC_Toggle
+}
+
+User --> UC_List
+User --> UC_Plan
+User --> UC_SortDur
+User --> UC_SortPrice
+User --> UC_Toggle
+User --> UC_FilterType
+User --> UC_FilterDay
+
+UC_Plan .> UC_FilterType : <<include>>
+UC_Plan .> UC_FilterDay  : <<include>>
+UC_Plan .> UC_SortDur    : <<extend>>
+UC_Plan .> UC_SortPrice  : <<extend>>
+UC_Plan .> UC_Toggle     : <<extend>>
+UC_Load .. UC_Plan       : <<precondition>>
+@enduml

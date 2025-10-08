@@ -1,0 +1,46 @@
+@startuml domain model
+skinparam classAttributeIconSize 0
+
+class City {
+  +name: String
+}
+
+class TrainConnection {
+  +routeID: String
+  +departureCity: String
+  +arrivalCity: String
+  +departureTime: LocalTime
+  +arrivalTime: LocalTime
+  +arrivalDayOffset: int
+  +trainType: String
+  +daysOfOperation: String
+  +firstClassRate: int
+  +secondClassRate: int
+  +tripDuration: Duration
+}
+
+class TrainGraph {
+  +getAllCities(): Set<String>
+  +pathsUpToTwoIntermediates(from: String, to: String, edgeFilter: Predicate<TrainConnection>): List<PathResult>
+}
+
+class PathResult {
+  +from: String
+  +to: String
+  +edges: List<TrainConnection>
+  +totalDuration: Duration
+}
+
+City "1" o-- "many" TrainConnection : departure
+City "1" o-- "many" TrainConnection : arrival
+TrainGraph "1" *-- "many" TrainConnection
+PathResult "1" *-- "1..3" TrainConnection
+
+note right of TrainConnection
+daysOfOperation examples:
+- "Daily"
+- "Mon,Wed,Fri"
+- "Fri-Sun" (wrap allowed)
+Trip duration reflects arrivalDayOffset.
+end note
+@enduml
