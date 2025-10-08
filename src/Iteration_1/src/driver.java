@@ -66,9 +66,15 @@ public class driver {
         System.out.println("\nType the TO city (case-sensitive). Type '?' to list cities.");
         String to = promptCity(cities, "TO", g);
 
+        System.out.println("\nType the type of trains to travel on (case-sensitive). Type '?' to list the type of trains availible. Type \"all\" for all types and '?' for a list of types. Format: \"TGV,ICE,RJX\"");
+        Set<String> typeTrains = promptTypeTrains();
+
+        System.out.println("\nType the departure day (case-sensitive). Type \"all\" for any day. Format: \"mon,tue\"");
+        Set<String> depDays = promptDays();
+
         Predicate<TrainConnection> any = e -> true;
 
-        List<TrainGraph.PathResult> base = g.pathsUpToTwoIntermediates(from, to, any);
+        List<TrainGraph.PathResult> base = g.pathsUpToTwoIntermediates(from, to, any,depDays,typeTrains);
         if (base == null || base.isEmpty()) {
             System.out.println("\nNo trips found with ≤ 2 connections from " + from + " to " + to + ".");
             return;
@@ -152,5 +158,75 @@ private static void printPaths(List<TrainGraph.PathResult> paths, boolean firstC
 
 
 
+    }
+
+    private static Set<String> promptTypeTrains(){
+        Set<String> types = TrainConnection.getTrainTypes();
+        Set<String> setTrain = new HashSet<>();
+        boolean todo = true;
+        while(todo){
+            System.out.print("Type of train: ");
+            String s = in.nextLine().trim();
+            if (s.equals("?")){
+                for(String str: types){
+                    System.out.print(str + ", ");
+                }
+                continue;
+            }
+
+            if (s.equals("all")){
+                todo = false;
+                setTrain.clear();
+                break;
+            }
+
+            String[] temp = s.split(",");
+            
+            for (String str : temp){
+                if(types.contains(str)){
+                    setTrain.add(str);
+                    todo = false;
+                }
+                else{
+                    System.out.println(str+" is not a type of train available. Enter '?' for the type of trains available.");
+                    todo = true;
+                    setTrain.clear();
+                    break;
+                }
+            }
+        }
+        return setTrain;
+    }
+
+    private static Set<String> promptDays(){
+        Set<String> days = Set.of("Mon", "Tue", "Wed", "Thu", "Fri","Sat", "Sun");
+        Set<String> depDays = new HashSet<>();
+        boolean todo = true;
+
+        while(todo){
+            System.out.print("Departure days: ");
+            String s = in.nextLine().trim();
+
+            if (s.equals("all")){
+                depDays.clear();
+                break;
+            }
+
+            String[] temp = s.split(",");
+
+            for(String str : temp){
+                if (days.contains(str)){
+                    depDays.add(str);
+                    todo = false;
+                }
+                else{
+                    System.out.println("Only days of the week in format \"mon,tue,sat\" are accepted. Enter \"all\" for any departure day.");
+                    depDays.clear();
+                    todo = true;
+                    break;
+                }
+            }
+        }
+        return depDays;
     }
 }
