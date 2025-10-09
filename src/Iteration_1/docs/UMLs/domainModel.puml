@@ -1,39 +1,54 @@
 @startuml domain model
 skinparam classAttributeIconSize 0
 
-class City {
-  +name: String
+object City {
+  name: String
 }
 
-class TrainConnection {
-  +routeID: String
-  +departureCity: String
-  +arrivalCity: String
-  +departureTime: LocalTime
-  +arrivalTime: LocalTime
-  +arrivalDayOffset: int
-  +trainType: String
-  +daysOfOperation: String
-  +firstClassRate: int
-  +secondClassRate: int
-  +tripDuration: Duration
+object CityCatalog{
+
 }
 
-class TrainGraph {
-  +getAllCities(): Set<String>
-  +pathsUpToTwoIntermediates(from: String, to: String, edgeFilter: Predicate<TrainConnection>): List<PathResult>
+object TrainConnectionCatalog{
+
 }
 
-class PathResult {
-  +from: String
-  +to: String
-  +edges: List<TrainConnection>
-  +totalDuration: Duration
+object TrainConnection {
+  routeID
+  departureTime
+  arrivalTime
+  arrivalDayOffset
+  trainType
+  daysOfOperation
+  firstClassRate
+  secondClassRate
+  tripDuration
 }
 
-City "1" o-- "many" TrainConnection : departure
-City "1" o-- "many" TrainConnection : arrival
-TrainGraph "1" *-- "many" TrainConnection
+
+object TrainGraph {
+
+}
+
+object PathResultCatalog{
+
+}
+
+object PathResult {
+  Duration
+}
+
+
+PathResultCatalog *-- PathResult
+TrainConnectionCatalog *-- TrainConnection
+CityCatalog *-- City
+City "1" -- "*" TrainConnection : departure
+City "1" -- "*" TrainConnection : arrival
+City "1" -- "*" PathResult : departure
+City "1" -- "*" PathResult : arrival
+TrainGraph "1" --  "1" TrainConnectionCatalog
+TrainGraph "1" --  "1" PathResultCatalog
+TrainGraph "1" --  "1" CityCatalog
 PathResult "1" *-- "1..3" TrainConnection
 
 note right of TrainConnection
