@@ -1,0 +1,21 @@
+@startuml systemSequenceDiagram
+actor User
+participant System
+
+User -> System : loadTrainConnectionsFromCSV(file)
+System --> User : trainConnections
+
+loop menu
+    User-> System : planTrip(departureCity,arrivalCity,trainTypes,departureDays)
+    System --> User : pathResults
+    loop displayPathResults
+        alt byPrice
+            User -> System : sortByPrice(choiceClass)
+        else ByDuration
+            User -> System : sortByDuration()
+        end
+        System --> User : sortedPathResults
+    end
+end
+@enduml
+
