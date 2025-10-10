@@ -5,6 +5,8 @@ Sergio Abreo Alvarez 40274677
 Hossam Mostafa 40245337  
 
 # Iteration 1
+Contributions: All members contributed equally for the delivery of this iteration, the coding was mostly done follwing the "Pair programming" methodologie using Sergio's(pergioa) laptop. The diagrams and operaiton contracts were task evenly distributed aswell.
+
 In order to use the program for the project, the user should navigate to the path : `src/Iteration_1/src` and use the make file provided to compile, run or clean.  
   
   The user has the option to use the follwing commands in the terminal while being at the above specifed path.
