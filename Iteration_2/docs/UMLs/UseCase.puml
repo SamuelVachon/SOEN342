@@ -1,0 +1,11 @@
+@startuml use case diagram
+left to right direction
+actor Passenger as User
+
+rectangle "Rail Planner (CLI)" {
+  usecase "Plan Trip (≤ 2 connections)" as UC_Plan
+}
+
+User --> UC_Plan
+
+@enduml
