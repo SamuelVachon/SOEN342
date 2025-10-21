@@ -4,8 +4,15 @@ actor Passenger as User
 
 rectangle "Rail Planner (CLI)" {
   usecase "Plan Trip (≤ 2 connections)" as UC_Plan
+  usecase "Load train connections" as UC_load
+  usecase "Book a trip" as UC_book
+  usecase "View trip" as UC_view
 }
 
+
 User --> UC_Plan
+User --> UC_load
+User --> UC_book
+User --> UC_view
 
 @enduml

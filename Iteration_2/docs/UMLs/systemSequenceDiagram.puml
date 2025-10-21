@@ -6,7 +6,13 @@ User -> System : loadTrainConnectionsFromCSV(file)
 System --> User : trainConnections
 
 loop menu
-    User-> System : planTrip(departureCity,arrivalCity,trainTypes,departureDays)
+    alt viewTrip
+        User -> System : find(id, name)
+        System --> User : customer
+        User -> System : viewTrip(customer)
+        System --> User : trips
+    else planTrip
+        User-> System : planTrip(departureCity,arrivalCity,trainTypes,departureDays)
     System --> User : pathResults
     loop displayPathResults
         alt byPrice
@@ -15,6 +21,11 @@ loop menu
             User -> System : sortByDuration()
         end
         System --> User : sortedPathResults
+    end
+    alt bookTrip
+        User -> System : BookTrip(clients, pathResult)
+        System --> User : Confirmation
+    end
     end
 end
 @enduml
