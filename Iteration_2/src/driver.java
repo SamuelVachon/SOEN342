@@ -159,7 +159,7 @@ public class driver {
         System.out.print("How many travellers? ");
         int numTravellers = readInt();
 
-
+    ArrayList<CustomerCatalog.Customer> allCustomers = new ArrayList<>();
     for (int i = 0; i < numTravellers; i++) {
         System.out.println("\nTraveller " + (i + 1) + ":");
         System.out.print("Name: ");
@@ -171,15 +171,12 @@ public class driver {
         
 
         CustomerCatalog.Customer customerTemp =customerCatalog.find(id, name);
-        if (customerTemp != null) {
-            continue;
+        if (customerTemp == null) {
+            customerTemp = customerCatalog.add(name, id, age);
         }
-        else{
-                customerCatalog.add(name, id, age);
-        }
+        allCustomers.add(customerTemp);
     }
 
-        ArrayList<CustomerCatalog.Customer> allCustomers = customerCatalog.getCustomers();
         customerCatalog.bookTrip(allCustomers, chosenPath);
 
         for (CustomerCatalog.Customer c : allCustomers) {
@@ -188,11 +185,8 @@ public class driver {
 
         System.out.println("\n Trip booked successfully!");
         
-        try {
-            Thread.sleep(7000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        System.out.println("Press Enter to go back to menu...");
+        in.nextLine();
 
 
     }
