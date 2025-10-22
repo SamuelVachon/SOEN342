@@ -185,11 +185,8 @@ public class driver {
 
         System.out.println("\n Trip booked successfully!");
         
-        try {
-            Thread.sleep(7000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        System.out.println("Press Enter to go back to menu...");
+        in.nextLine();
 
 
     }
