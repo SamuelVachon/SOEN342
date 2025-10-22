@@ -6,10 +6,9 @@ public class driver {
     private static final Scanner in = new Scanner(System.in);
 
     public static void main(String[] args) {
-        String csv = (args.length > 0) ? args[0] : "eu_rail_network.csv";
+        String csv = (args.length > 0) ? args[0] : "Iteration_2/src/eu_rail_network.csv";
         TrainConnection.loadTrainConnectionsFromCSV(csv);
         TrainGraph g = new TrainGraph(TrainConnection.trainConnections);
-
         while (true) {
             System.out.println("\n=== RAIL PLANNER ===");
             System.out.println("1) List available cities");
@@ -53,7 +52,10 @@ public class driver {
         }
     }
 
-    private static void planTripUI(TrainGraph g) {
+    private static void planTripUI(TrainGraph g) 
+    {
+        CustomerCatalog customerCatalog = new CustomerCatalog();
+
         Set<String> all = g.getAllCities();
         if (all.isEmpty()) {
             System.out.println("Error. Couldn't load CSV.");
@@ -90,7 +92,7 @@ public class driver {
 
         boolean useFirstClass = false; // default sort by 2nd-class price
         List<TrainGraph.PathResult> shown = new ArrayList<>(paths);
-
+        boolean UserisBooking = false;
         while (true) {
             System.out.println("\n=== Trips " + from + " → " + to + " (≤2 connections) ===");
             printPaths(shown, useFirstClass);
@@ -99,7 +101,9 @@ public class driver {
             System.out.println("1) Sort by total PRICE (" + (useFirstClass ? "FIRST" : "SECOND") + "-class)");
             System.out.println("2) Sort by total DURATION");
             System.out.println("3) Toggle price class (now " + (useFirstClass ? "FIRST" : "SECOND") + ")");
-            System.out.println("4) Back to main menu");
+            System.out.println("4) Book a trip");
+            System.out.println("5) View bookings (Existing customers only)");
+            System.out.println("6) Back to main menu");
             System.out.print("Choose: ");
 
             int opt = readInt();
@@ -118,12 +122,79 @@ public class driver {
                 case 3:
                     useFirstClass = !useFirstClass;
                     break;
-                case 4:
+                case 4: {
+                        System.out.print("\nSelect the trip number to book (1-" + shown.size() + "): ");
+                        int sel = in.nextInt();
+                        if (sel < 1 || sel > shown.size()) {
+                            System.out.println("Invalid selection.");
+                            break;
+                        }
+                        TrainGraph.PathResult chosenPath = shown.get(sel - 1);
+                        bookTrip(customerCatalog, chosenPath);
+                        break;
+                     }
+                 case 5: 
+                    System.out.println("\nExisting Customers' Bookings:");
+                    System.out.println("==============================");
+                    System.out.println("Please Enter your Name:");
+                    String name = in.nextLine();
+                    System.out.println("Please Enter your ID:");
+                    String id = in.nextLine();
+                    System.out.println("/n/n");
+                    CustomerCatalog.Customer existingCustomer = customerCatalog.find(id, name);
+                    if (existingCustomer != null) {
+                        customerCatalog.viewTrip(existingCustomer); 
+                    } else {
+                        System.out.println("Customer not found.");
+                    }
+                    break;
+                case 6:
                     return;
                 default:
-                    System.out.println("Invalid choice.");
+                    System.out.println("Invalid option.");
             }
         }
+    }
+    private static void bookTrip(CustomerCatalog customerCatalog, TrainGraph.PathResult chosenPath){
+        System.out.print("How many travellers? ");
+        int numTravellers = readInt();
+
+
+    for (int i = 0; i < numTravellers; i++) {
+        System.out.println("\nTraveller " + (i + 1) + ":");
+        System.out.print("Name: ");
+        String name = in.nextLine();
+        System.out.print("ID: ");
+        String id = in.nextLine();
+        System.out.print("Age: ");
+        int age = readInt();
+        
+
+        CustomerCatalog.Customer customerTemp =customerCatalog.find(id, name);
+        if (customerTemp != null) {
+            continue;
+        }
+        else{
+                customerCatalog.add(name, id, age);
+        }
+    }
+
+        ArrayList<CustomerCatalog.Customer> allCustomers = customerCatalog.getCustomers();
+        customerCatalog.bookTrip(allCustomers, chosenPath);
+
+        for (CustomerCatalog.Customer c : allCustomers) {
+                customerCatalog.viewTrip(c);
+        }
+
+        System.out.println("\n Trip booked successfully!");
+        
+        try {
+            Thread.sleep(7000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+
     }
 
     private static void printPaths(List<TrainGraph.PathResult> list, boolean firstClass) {
@@ -285,5 +356,8 @@ public class driver {
             }
         }
         return out;
+        
     }
+
+    
 }

@@ -1,7 +1,7 @@
 import java.util.*;
 
 public class CustomerCatalog{
-    public static ArrayList<Customer> customers = new ArrayList<>();
+    private  static ArrayList<Customer> customers = new ArrayList<>();
 
     public CustomerCatalog(){
 
@@ -9,7 +9,7 @@ public class CustomerCatalog{
 
     public void bookTrip(ArrayList<Customer> clients, TrainGraph.PathResult pathResult){
         Trip trip = clients.get(0).bookTrip(clients, pathResult);
-        for (int i=1;i<clients.size();i++){
+        for (int i=0;i<clients.size();i++){
             clients.get(i).addTrip(trip);
         }
     }
@@ -29,8 +29,12 @@ public class CustomerCatalog{
         return null;
     }
 
-    public viewTrip(Customer customer){
+    public void viewTrip(Customer customer){
         System.out.println(customer.toString());
+    }
+
+    public ArrayList<Customer> getCustomers(){
+        return this.customers;
     }
 
     public class Customer{
@@ -95,4 +99,5 @@ public class CustomerCatalog{
             }
             return string;
         }
+}
 }
