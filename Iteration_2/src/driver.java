@@ -6,14 +6,16 @@ public class driver {
     private static final Scanner in = new Scanner(System.in);
 
     public static void main(String[] args) {
-        String csv = (args.length > 0) ? args[0] : "eu_rail_network.csv";
+        String csv = (args.length > 0) ? args[0] : "Iteration_2/src/eu_rail_network.csv";
         TrainConnection.loadTrainConnectionsFromCSV(csv);
         TrainGraph g = new TrainGraph(TrainConnection.trainConnections);
+            CustomerCatalog customerCatalog = new CustomerCatalog();
         while (true) {
             System.out.println("\n=== RAIL PLANNER ===");
             System.out.println("1) List available cities");
             System.out.println("2) Plan a trip (≤ 2 connections)");
-            System.out.println("3) Quit");
+            System.out.println("3) View bookings (Existing customers only)");
+            System.out.println("4) Quit");
             System.out.print("Choose: ");
             int choice = readInt();
             switch (choice) {
@@ -24,6 +26,20 @@ public class driver {
                     planTripUI(g);
                     break;
                 case 3:
+                System.out.println("\nExisting Customers' Bookings:");
+                    System.out.println("==============================");
+                    System.out.println("Please Enter your Name:");
+                    String name = in.nextLine();
+                    System.out.println("Please Enter your ID:");
+                    String id = in.nextLine();
+                    CustomerCatalog.Customer existingCustomer = customerCatalog.find(id, name);
+                    if (existingCustomer != null) {
+                        customerCatalog.viewTrip(existingCustomer); 
+                    } else {
+                        System.out.println("Customer not found.");
+                    }
+                    break;
+                case 4:
                     System.out.println("Goodbye!");
                     return;
                 default:
@@ -102,8 +118,7 @@ public class driver {
             System.out.println("2) Sort by total DURATION");
             System.out.println("3) Toggle price class (now " + (useFirstClass ? "FIRST" : "SECOND") + ")");
             System.out.println("4) Book a trip");
-            System.out.println("5) View bookings (Existing customers only)");
-            System.out.println("6) Back to main menu");
+            System.out.println("5) Back to main menu");
             System.out.print("Choose: ");
 
             int opt = readInt();
@@ -133,22 +148,7 @@ public class driver {
                         bookTrip(customerCatalog, chosenPath);
                         break;
                      }
-                 case 5: 
-                    System.out.println("\nExisting Customers' Bookings:");
-                    System.out.println("==============================");
-                    System.out.println("Please Enter your Name:");
-                    String name = in.nextLine();
-                    System.out.println("Please Enter your ID:");
-                    String id = in.nextLine();
-                    System.out.println("/n/n");
-                    CustomerCatalog.Customer existingCustomer = customerCatalog.find(id, name);
-                    if (existingCustomer != null) {
-                        customerCatalog.viewTrip(existingCustomer); 
-                    } else {
-                        System.out.println("Customer not found.");
-                    }
-                    break;
-                case 6:
+                case 5:
                     return;
                 default:
                     System.out.println("Invalid option.");
