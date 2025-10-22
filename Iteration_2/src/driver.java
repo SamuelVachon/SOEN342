@@ -6,7 +6,7 @@ public class driver {
     private static final Scanner in = new Scanner(System.in);
 
     public static void main(String[] args) {
-        String csv = (args.length > 0) ? args[0] : "Iteration_2/src/eu_rail_network.csv";
+        String csv = (args.length > 0) ? args[0] : "eu_rail_network.csv";
         TrainConnection.loadTrainConnectionsFromCSV(csv);
         TrainGraph g = new TrainGraph(TrainConnection.trainConnections);
         while (true) {
