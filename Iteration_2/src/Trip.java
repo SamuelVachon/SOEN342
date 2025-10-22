@@ -20,7 +20,7 @@ public class Trip{
 
     @Override
     public String toString() {
-        String string = "Trip Reservations:\n";
+        String string = "[" + this.id + "]\n" + "Trip Reservations:\n";
         for(Reservation res: this.reservations){
             string += res.toString() + "\n";
         }
