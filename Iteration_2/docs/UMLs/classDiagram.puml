@@ -19,6 +19,40 @@ class driver {
   - parseDaysSpec(s: String): EnumSet<DayOfWeek>
 }
 
+class CustomerCatalog {
+  - static customers: ArrayList<Customer>
+  + CustomerCatalog()
+  + bookTrip(clients: ArrayList<Customer>, pathResult: TrainGraph.PathResult): void
+  + add(name: String, id: String, age: int): Customer
+  + find(id: String, name: String): Customer
+  + viewTrip(customer: Customer): void
+  + getCustomers(): ArrayList<Customer>
+}
+
+class "CustomerCatalog.Customer" as Customer {
+  - name: String
+  - id: String
+  - age: int
+  - trips: ArrayList<Trip>
+  + Customer(name: String, id: String, age: int)
+  + bookTrip(clients: ArrayList<CustomerCatalog.Customer>, pathResult: TrainGraph.PathResult): Trip
+  + addTrip(trip: Trip): void
+  + getName(): String
+  + getId(): String
+  + getAge(): int
+  + getTrips(): ArrayList<Trip>
+  + toString(): String
+}
+
+class Trip {
+  - id: int
+  - static counter: int
+  - reservations: ArrayList<Reservation>
+  + Trip(clients: ArrayList<CustomerCatalog.Customer>, pathResult: TrainGraph.PathResult)
+  + getReservations(): ArrayList<Reservation>
+  + toString(): String
+}
+
 class TrainConnection {
   + static trainConnections: ArrayList<TrainConnection>
   - routeID: String
@@ -77,8 +111,13 @@ class "TrainGraph.PathResult" as PathResult {
 }
 
 driver ..> TrainGraph
-driver ..> TrainConnection
-TrainGraph ..> TrainConnection
+driver ..> CustomerCatalog
 TrainGraph *-- PathResult
 PathResult ..> TrainConnection
+CustomerCatalog *-- Customer
+CustomerCatalog ..> Trip
+Trip ..> CustomerCatalog.Customer
+Trip ..> TrainGraph.PathResult
+Trip *-- Reservation
+
 @enduml
