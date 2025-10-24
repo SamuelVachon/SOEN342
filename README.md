@@ -22,7 +22,7 @@ Trips are planned with 2 or less connections, the user will be asked to provide 
 The trip duration takes into consideration the amount of time the person would have to wait for their connection train to depart. If the user cannot make it to the follwing train connection due to the previous train arrival time being after the connections departure then the trip duration takes into accound the total hours of wait time till the train for the next day.
 
 
-# Iteration 1  
+# Iteration 2  
 Contributions: All members contributed equally for the delivery of this iteration working using "Pair programming".  
 
 In order to use this iteration of the code the user navigates to the path: `Iteration_2/src` and uses the makefile in that folder to compile run or clean.
