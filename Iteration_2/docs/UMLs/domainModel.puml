@@ -1,0 +1,101 @@
+@startuml domain model
+skinparam classAttributeIconSize 0
+
+object City {
+  name: String
+}
+
+object CityCatalog{
+
+}
+
+object TrainConnectionCatalog{
+
+}
+
+object TrainConnection {
+  routeID
+  departureTime
+  arrivalTime
+  arrivalDayOffset
+  trainType
+  daysOfOperation
+  firstClassRate
+  secondClassRate
+  tripDuration
+}
+
+
+object TrainGraph {
+
+}
+
+object PathResultCatalog{
+
+}
+
+object PathResult {
+  Duration
+}
+
+object customerCatalog{
+
+}
+
+object Customer{
+  String name
+  String id
+  int age
+}
+
+object tripCatalog{
+
+}
+
+object Trip{
+
+}
+
+object reservationCatalog{
+
+}
+
+object reservation{
+  int id
+}
+
+object driver{
+
+}
+
+driver "1" -- "1" TrainGraph
+driver "1" -- "1" customerCatalog
+customerCatalog  *-- Customer
+Customer "1" -- "1" tripCatalog
+tripCatalog *-- Trip
+Trip "1" -- "1" reservationCatalog
+reservationCatalog *-- reservation
+reservation "1" -- "1" Customer
+reservation "1" -- "1" PathResult
+
+PathResultCatalog *-- PathResult
+TrainConnectionCatalog *-- TrainConnection
+CityCatalog *-- City
+City "1" -- "*" TrainConnection : departure
+City "1" -- "*" TrainConnection : arrival
+City "1" -- "*" PathResult : departure
+City "1" -- "*" PathResult : arrival
+TrainGraph "1" --  "1" TrainConnectionCatalog
+TrainGraph "1" --  "1" PathResultCatalog
+TrainGraph "1" --  "1" CityCatalog
+PathResult "1" *-- "1..3" TrainConnection
+
+
+note right of TrainConnection
+daysOfOperation examples:
+- "Daily"
+- "Mon,Wed,Fri"
+- "Fri-Sun" (wrap allowed)
+Trip duration reflects arrivalDayOffset.
+end note
+@enduml

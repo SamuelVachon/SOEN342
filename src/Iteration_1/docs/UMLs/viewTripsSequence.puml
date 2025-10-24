@@ -3,6 +3,8 @@ actor User
 participant driver
 participant CustomerCatalog
 participant "CustomerCatalog.Customer" as Customer
+participant Trip
+participant Reservation
 
 User -> driver : select "View bookings"
 driver -> User : prompt(Name, ID)
@@ -12,14 +14,25 @@ driver -> CustomerCatalog : find(id, name)
 alt Customer exists
     CustomerCatalog --> driver : Customer object
     driver -> CustomerCatalog : viewTrip(Customer)
+    
     CustomerCatalog -> Customer : toString()
-    Customer --> CustomerCatalog : trip details
-    CustomerCatalog --> driver : trip information
-    driver -> User : display trips
+    
+    loop for each Trip owned by Customer
+        Customer -> Trip : toString()
+        
+        loop for each Reservation owned by Trip
+            Trip -> Reservation : toString()
+            Reservation --> Trip : reservation details
+        end
+        
+        Trip --> Customer : trip details
+    end
+    
+    Customer --> CustomerCatalog : all trip details
+    CustomerCatalog --> driver : formatted trip info
+    driver -> User : display trips and reservations
 else Customer not found
     CustomerCatalog --> driver : null
     driver -> User : "Customer not found"
 end
 @enduml
-
-
