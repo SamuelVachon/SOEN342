@@ -1,0 +1,36 @@
+@startuml sequence diagram
+actor User
+participant driver
+participant TrainGraph as G
+participant "PathResult\n(wait-aware total)" as PR
+
+User -> driver : start program
+driver -> TrainConnection : loadTrainConnectionsFromCSV(csv)
+TrainConnection --> driver : static list populated
+driver -> G : new TrainGraph(trainConnections)
+
+loop menu
+  User -> driver : choose "Plan a trip"
+  driver -> User : prompt FROM, TO
+  User --> driver : FROM, TO
+  driver -> User : prompt types, days
+  User --> driver : Set<String> typesSelected, EnumSet<DayOfWeek> daysSelected
+
+  driver -> driver : build Predicate<TrainConnection>\n(typeOK && runsOnAny(tc, daysSelected))
+
+  driver -> G : pathsUpToTwoIntermediates(from, to, predicate)
+  activate G
+  G -> G : dfsCollectFiltered(...)\nDFS up to 3 edges, no cycles
+  loop for each candidate path
+    G -> PR : new PathResult(edges)
+    activate PR
+    PR -> PR : computeTotalWithWaits(edges)\n- start at first dep time\n- for each next edge:\n  align to same/next day dep\n- total = finalArrival - firstDeparture
+    deactivate PR
+  end
+  G --> driver : List<PathResult>
+  deactivate G
+
+  driver -> driver : sort by price/duration\nprint options
+  driver -> User : display results & menu (toggle class / sort)
+end
+@enduml

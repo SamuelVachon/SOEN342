@@ -1,0 +1,25 @@
+@startuml bookTripSequence
+actor User
+participant driver
+participant CustomerCatalog
+participant Customer
+participant tripCatalog
+participant Trip
+participant reservationCatalog
+participant reservation
+
+
+User -> driver : bookTrip(clients, pathResult)
+driver -> CustomerCatalog : bookTrip(clients, pathResult)
+CustomerCatalog -> Customer : bookTrip(clients, pathResult)
+Customer -> tripCatalog : add(clients, pathResult)
+tripCatalog -> Trip : create(clients, pathResult)
+loop client : clients
+    Trip -> reservationCatalog : add(client, pathResult)
+    reservationCatalog -> reservation : create(client, pathResult)
+    Trip -> Customer : add(trip)
+    Customer -> tripCatalog : add(trip)
+end
+
+
+@enduml

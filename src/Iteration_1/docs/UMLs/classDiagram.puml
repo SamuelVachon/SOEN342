@@ -1,0 +1,84 @@
+@startuml class diagram
+set namespaceSeparator .
+skinparam classAttributeIconSize 0
+
+class driver {
+  - in: Scanner
+  + main(args: String[]): void
+  - listCities(g: TrainGraph): void
+  - planTripUI(g: TrainGraph): void
+  - promptCity(cities: Set<String>, label: String, g: TrainGraph): String
+  - readInt(): int
+  - promptTypeTrains(): Set<String>
+  - promptDays(): EnumSet<DayOfWeek>
+  - sumPrice(p: TrainGraph.PathResult, firstClass: boolean): int
+  - runsOnAny(tc: TrainConnection, selected: EnumSet<DayOfWeek>): boolean
+  - operatingDays(spec: String): EnumSet<DayOfWeek>
+  - daysRange(range: String): EnumSet<DayOfWeek>
+  - tokenToDay(tok: String): DayOfWeek
+  - parseDaysSpec(s: String): EnumSet<DayOfWeek>
+}
+
+class TrainConnection {
+  + static trainConnections: ArrayList<TrainConnection>
+  - routeID: String
+  + departureCity: String
+  + arrivalCity: String
+  + departureTime: LocalTime
+  + arrivalTime: LocalTime
+  + arrivalDayOffset: int
+  + trainType: String
+  + daysOfOperation: String
+  + firstClassRate: int
+  + secondClassRate: int
+  + tripDuration: Duration
+  + getRouteID(): String
+  + static loadTrainConnectionsFromCSV(filePath: String): void
+  + static getTrainTypes(): Set<String>
+  - static computeDuration(dep: LocalTime, arr: LocalTime, offset: int): Duration
+  - static parseCsvLine(line: String): ArrayList<String>
+  - static cleanTime(raw: String): String
+  - static extractDayOffset(raw: String): int
+  - static loadDays(str: String): String
+  + toString(): String
+}
+
+class TrainGraph {
+  - graph: Map<String, Map<String, List<TrainConnection>>>
+  + TrainGraph(connections: List<TrainConnection>)
+  + getAllCities(): Set<String>
+  + getConnections(from: String, to: String): List<TrainConnection>
+  + getConnectionsFrom(from: String): List<TrainConnection>
+  + hasDirect(from: String, to: String): boolean
+  + edgeCount(): int
+  + allPathsUpToTwoIntermediates(): Map<String, Map<String, List<PathResult>>>
+  + allPathsUpToTwoIntermediates(edgeFilter: Predicate<TrainConnection>): Map<String, Map<String, List<PathResult>>>
+  + pathsUpToTwoIntermediates(from: String, to: String, edgeFilter: Predicate<TrainConnection>): List<PathResult>
+  - dfsCollectFiltered(origin: String, current: String, edgesRem: int,
+      visited: Set<String>, path: Deque<TrainConnection>,
+      edgeFilter: Predicate<TrainConnection>,
+      sink: Map<String, Map<String, List<PathResult>>>): void
+  - dfsCollect(origin: String, current: String, edgesRem: int,
+      visited: Set<String>, path: Deque<TrainConnection>,
+      sink: Map<String, Map<String, List<PathResult>>>): void
+  + fastestPathPerPairUpToTwoIntermediates(): Map<String, Map<String, PathResult>>
+  + toString(): String
+}
+
+class "TrainGraph.PathResult" as PathResult {
+  + from: String
+  + to: String
+  + edges: List<TrainConnection>
+  + totalDuration: Duration
+  - static computeTotalWithWaits(edges: List<TrainConnection>): Duration
+  - static minutesOfDay(t: LocalTime): int
+  - static alignToNextOrSame(currentAbs: long, targetMinOfDay: int): long
+  + toString(): String
+}
+
+driver ..> TrainGraph
+driver ..> TrainConnection
+TrainGraph ..> TrainConnection
+TrainGraph *-- PathResult
+PathResult ..> TrainConnection
+@enduml

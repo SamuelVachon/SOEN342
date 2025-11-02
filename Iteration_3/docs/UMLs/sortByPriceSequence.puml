@@ -1,0 +1,13 @@
+@startuml sortByPriceSequence
+
+Actor User
+participant driver
+participant Comparator
+participant PathResultCatalog
+
+User -> driver: sortByPrice(choiceClass)
+driver -> Comparator : cmp-:create(choiceClass)
+driver -> PathResultCatalog : pathResults-:sort(cmp)
+driver -> driver : display(pathResults)
+
+@enduml
