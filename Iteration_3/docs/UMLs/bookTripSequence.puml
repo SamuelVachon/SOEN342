@@ -9,7 +9,14 @@ participant reservationCatalog
 participant reservation
 
 
+
 User -> driver : bookTrip(clients, pathResult)
+loop client : clients
+    alt newClient
+        driver -> CustomerCatalog : addClient(client)
+        driver ->CustomerCatalog : saveCustomertoDB(client)
+    end
+end
 driver -> CustomerCatalog : bookTrip(clients, pathResult)
 CustomerCatalog -> Customer : bookTrip(clients, pathResult)
 Customer -> tripCatalog : add(clients, pathResult)
@@ -19,6 +26,10 @@ loop client : clients
     reservationCatalog -> reservation : create(client, pathResult)
     Trip -> Customer : add(trip)
     Customer -> tripCatalog : add(trip)
+end
+driver -> CustomerCatalog : saveTripToDB(trip)
+loop reservation: trip.reservations
+    driver -> CustomerCatalog : saveReservationToDB(reservation)
 end
 
 
