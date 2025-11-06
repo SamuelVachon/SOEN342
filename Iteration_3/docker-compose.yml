@@ -13,22 +13,6 @@ services:
     volumes:
       - db_data:/var/lib/mysql
 
-  app:
-    build: .
-    container_name: soen342_app
-    depends_on:
-      - db
-    environment:
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_NAME: train_system
-      DB_USER: user
-      DB_PASS: pass
-    ports:
-      - "8080:8080"
-    stdin_open: true
-    tty: true
-
 volumes:
   db_data:
 

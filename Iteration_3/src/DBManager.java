@@ -3,7 +3,8 @@ import java.sql.*;
 public class DBManager {
 
     // Database credentials
-    private static final String URL = "jdbc:mysql://db:3306/train_system";
+    // Use "localhost" when running Java locally, "db" when running in Docker
+    private static final String URL = "jdbc:mysql://localhost:3306/train_system";
     private static final String USER = "user";
     private static final String PASSWORD = "pass"; 
 
