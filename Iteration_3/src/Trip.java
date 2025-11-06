@@ -18,6 +18,10 @@ public class Trip{
         return this.reservations;
     }
 
+    public int getId() {
+        return this.id;
+    }
+
     @Override
     public String toString() {
         String string = "[" + this.id + "]\n" + "Trip Reservations:\n";

@@ -180,18 +180,10 @@ public class driver {
     }
 
     // Create the trip in memory
-    Trip trip = allCustomers.get(0).bookTrip(allCustomers, chosenPath);
-    for (CustomerCatalog.Customer c : allCustomers) {
-        c.addTrip(trip);
-    }
-
-    // Save the trip to DB
-    customerCatalog.saveTripToDB(trip, allCustomers.get(0), chosenPath);
-
-    // Save reservations for each passenger
-    for (CustomerCatalog.Customer c : allCustomers) {
-        Reservation reservation = new Reservation(c, chosenPath);
-        customerCatalog.saveReservationToDB(reservation, 1); // use real trip_id later
+    Trip trip = customerCatalog.bookTrip(allCustomers, chosenPath);
+    customerCatalog.saveTripToDB(trip, allCustomers.get(0), chosenPath); // save trip to DB
+    for (Reservation reservation : trip.getReservations()) {
+        customerCatalog.saveReservationToDB(reservation,trip.getId()); // save each reservation to DB
     }
 
     for (CustomerCatalog.Customer c : allCustomers) {

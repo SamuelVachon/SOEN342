@@ -11,11 +11,12 @@ public class CustomerCatalog{
 
     }
 
-    public void bookTrip(ArrayList<Customer> clients, TrainGraph.PathResult pathResult){
+    public Trip bookTrip(ArrayList<Customer> clients, TrainGraph.PathResult pathResult){
         Trip trip = clients.get(0).bookTrip(clients, pathResult);
         for (int i=0;i<clients.size();i++){
             clients.get(i).addTrip(trip);
         }
+        return trip;
     }
 
     public Customer add(String name, String id, int age){
