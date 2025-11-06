@@ -47,6 +47,7 @@ public class driver {
             }
         }
     }
+    
 
     private static void listCities(TrainGraph g) {
         ArrayList<String> cities = new ArrayList<>(g.getAllCities());
@@ -100,6 +101,7 @@ public class driver {
         };
 
         List<TrainGraph.PathResult> paths = g.pathsUpToTwoIntermediates(from, to, predicate);
+
 
         if (paths == null || paths.isEmpty()) {
             System.out.println("\nNo trips found with ≤ 2 connections from " + from + " to " + to + ".");
@@ -155,9 +157,9 @@ public class driver {
             }
         }
     }
-    private static void bookTrip(CustomerCatalog customerCatalog, TrainGraph.PathResult chosenPath){
-        System.out.print("How many travellers? ");
-        int numTravellers = readInt();
+     private static void bookTrip(CustomerCatalog customerCatalog, TrainGraph.PathResult chosenPath) {
+    System.out.print("How many travellers? ");
+    int numTravellers = readInt();
 
     ArrayList<CustomerCatalog.Customer> allCustomers = new ArrayList<>();
     for (int i = 0; i < numTravellers; i++) {
@@ -168,28 +170,39 @@ public class driver {
         String id = in.nextLine();
         System.out.print("Age: ");
         int age = readInt();
-        
 
-        CustomerCatalog.Customer customerTemp =customerCatalog.find(id, name);
-        if (customerTemp == null) {
-            customerTemp = customerCatalog.add(name, id, age);
-        }
-        allCustomers.add(customerTemp);
+        CustomerCatalog.Customer customerTemp = customerCatalog.find(id, name);
+    if (customerTemp == null) {
+        customerTemp = customerCatalog.add(name, id, age);
+        customerCatalog.saveCustomerToDB(customerTemp); //  save customer to DB
+    }
+    allCustomers.add(customerTemp);
     }
 
-        customerCatalog.bookTrip(allCustomers, chosenPath);
-
-        for (CustomerCatalog.Customer c : allCustomers) {
-                customerCatalog.viewTrip(c);
-        }
-
-        System.out.println("\n Trip booked successfully!");
-        
-        System.out.println("Press Enter to go back to menu...");
-        in.nextLine();
-
-
+    // Create the trip in memory
+    Trip trip = allCustomers.get(0).bookTrip(allCustomers, chosenPath);
+    for (CustomerCatalog.Customer c : allCustomers) {
+        c.addTrip(trip);
     }
+
+    // Save the trip to DB
+    customerCatalog.saveTripToDB(trip, allCustomers.get(0), chosenPath);
+
+    // Save reservations for each passenger
+    for (CustomerCatalog.Customer c : allCustomers) {
+        Reservation reservation = new Reservation(c, chosenPath);
+        customerCatalog.saveReservationToDB(reservation, 1); // use real trip_id later
+    }
+
+    for (CustomerCatalog.Customer c : allCustomers) {
+        customerCatalog.viewTrip(c);
+    }
+
+    System.out.println("\nTrip booked and saved successfully!");
+    System.out.println("Press Enter to go back to menu...");
+    in.nextLine();
+}
+
 
     private static void printPaths(List<TrainGraph.PathResult> list, boolean firstClass) {
         int i = 1;
@@ -350,8 +363,12 @@ public class driver {
             }
         }
         return out;
+
+        
         
     }
+
+    
 
     
 }

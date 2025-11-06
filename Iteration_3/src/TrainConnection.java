@@ -3,12 +3,14 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
+
 
 public class TrainConnection {
     public static ArrayList<TrainConnection> trainConnections = new ArrayList<>(100);
@@ -207,4 +209,36 @@ public class TrainConnection {
         }
         return trainTypes;
     }
+        // === Day helpers ===
+    public boolean runsOn(java.time.DayOfWeek d) {
+        if ("Daily".equalsIgnoreCase(daysOfOperation)) return true;
+        String key = d.name().substring(0,3); // MON,TUE,...
+        for (String tok : daysOfOperation.split(",")) {
+            if (tok.trim().equalsIgnoreCase(key.substring(0,1) + key.substring(1).toLowerCase())) {
+                return true; // "Mon","Tue",...
+            }
+        }
+        return false;
+    }
+
+    public java.util.EnumSet<java.time.DayOfWeek> operatingDaysSet() {
+        if ("Daily".equalsIgnoreCase(daysOfOperation)) {
+            return java.util.EnumSet.allOf(java.time.DayOfWeek.class);
+        }
+        java.util.EnumSet<java.time.DayOfWeek> set = java.util.EnumSet.noneOf(java.time.DayOfWeek.class);
+        for (String tok : daysOfOperation.split(",")) {
+            String t = tok.trim().toLowerCase();
+            switch (t) {
+                case "mon": set.add(java.time.DayOfWeek.MONDAY); break;
+                case "tue": set.add(java.time.DayOfWeek.TUESDAY); break;
+                case "wed": set.add(java.time.DayOfWeek.WEDNESDAY); break;
+                case "thu": set.add(java.time.DayOfWeek.THURSDAY); break;
+                case "fri": set.add(java.time.DayOfWeek.FRIDAY); break;
+                case "sat": set.add(java.time.DayOfWeek.SATURDAY); break;
+                case "sun": set.add(java.time.DayOfWeek.SUNDAY); break;
+            }
+        }
+        return set;
+    }
+
 }

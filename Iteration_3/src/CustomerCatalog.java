@@ -1,4 +1,8 @@
 import java.util.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class CustomerCatalog{
     private  static ArrayList<Customer> customers = new ArrayList<>();
@@ -99,5 +103,85 @@ public class CustomerCatalog{
             }
             return string;
         }
+    
+
+
 }
-}
+
+// ====================== DATABASE METHODS ======================
+    public void saveCustomerToDB(Customer customer) {
+        String sql = "INSERT INTO Customer (name, age, identifier) VALUES (?, ?, ?)";
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, customer.getName());
+            stmt.setInt(2, customer.getAge());
+            stmt.setString(3, customer.getId());
+            stmt.executeUpdate();
+            System.out.println("Customer saved to DB: " + customer.getName());
+        } catch (SQLException e) {
+            System.out.println(" Could not save customer: " + e.getMessage());
+        }
+    }
+
+    public void saveReservationToDB(Reservation r, int tripId) {
+        String sql = "INSERT INTO Reservation (trip_id, passenger_name, passenger_age, passenger_id, ticket_number)"
+                   + " VALUES (?, ?, ?, ?, ?)";
+        try (Connection conn = DBManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            CustomerCatalog.Customer c = r.getCustomer();
+            stmt.setInt(1, tripId);
+            stmt.setString(2, c.getName());
+            stmt.setInt(3, c.getAge());
+            stmt.setString(4, c.getId());
+            stmt.setString(5, "TICKET-" + r.getId());
+            stmt.executeUpdate();
+            System.out.println(" Reservation saved for passenger " + c.getName());
+        } catch (SQLException e) {
+            System.out.println(" Could not save reservation: " + e.getMessage());
+        }
+    }
+
+    public void saveTripToDB(Trip trip, Customer customer, TrainGraph.PathResult path) {
+        String sql = "INSERT INTO Trip (customer_id, origin, destination, path_description) VALUES (?, ?, ?, ?)";
+
+        try (Connection conn = DBManager.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            // Find customer_id from DB
+            String lookup = "SELECT customer_id FROM Customer WHERE identifier=? LIMIT 1";
+            try (PreparedStatement findStmt = conn.prepareStatement(lookup)) {
+                findStmt.setString(1, customer.getId());
+                ResultSet rs = findStmt.executeQuery();
+                if (rs.next()) {
+                    int customerId = rs.getInt("customer_id");
+
+                    stmt.setInt(1, customerId);
+                    stmt.setString(2, path.edges.get(0).departureCity);
+                    stmt.setString(3, path.edges.get(path.edges.size() - 1).arrivalCity);
+                    stmt.setString(4, path.toString());
+                    stmt.executeUpdate();
+
+                    System.out.println(" Trip saved to DB for " + customer.getName());
+                } else {
+                    System.out.println(" Could not find customer ID for " + customer.getName());
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println(" Could not save trip: " + e.getMessage());
+        }
+    }
+
+    private int getCustomerIdFromDB(String identifier) {
+        String sql = "SELECT customer_id FROM Customer WHERE identifier=? LIMIT 1";
+        try (Connection conn = DBManager.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, identifier);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) return rs.getInt("customer_id");
+        } catch (SQLException e) {
+            System.out.println("Could not find customer_id: " + e.getMessage());
+        }
+        return -1;
+    }
+
+    } 

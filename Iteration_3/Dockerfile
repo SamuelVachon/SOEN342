@@ -12,13 +12,15 @@ RUN wget https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-j-9.0.0
     tar -xzf mysql-connector-j-9.0.0.tar.gz && \
     cp mysql-connector-j-9.0.0/mysql-connector-j-9.0.0.jar /app/
 
+# Copy your CSV file into the container
+COPY eu_rail_network.csv ./
+
 # Copy your Java source files
 COPY src/ ./src/
 
 # Compile Java files into /app/out
-RUN mkdir -p out && javac -cp . src/*.java -d out
-
+RUN mkdir -p out && javac -cp "mysql-connector-j-9.0.0/mysql-connector-j-9.0.0.jar:." src/*.java -d out
 EXPOSE 8080
 
-# Run your main class (replace Main with your actual class that has main())
-CMD ["java", "-cp", "out:mysql-connector-j-9.0.0.jar", "driver"]
+# Run your main class
+CMD ["java", "-cp", "out:mysql-connector-j-9.0.0/mysql-connector-j-9.0.0.jar", "driver"]
