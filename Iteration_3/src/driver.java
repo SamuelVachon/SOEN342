@@ -1,12 +1,18 @@
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.DayOfWeek;
 import java.util.*;
 import java.util.function.Predicate;
 
 public class driver {
+    
     private static final Scanner in = new Scanner(System.in);
 
     public static void main(String[] args) {
-        String csv = (args.length > 0) ? args[0] : "./eu_rail_network.csv";
+        loader();
+    String csv = (args.length > 0) ? args[0] : "Iteration_3/eu_rail_network.csv";
         TrainConnection.loadTrainConnectionsFromCSV(csv);
         TrainGraph g = new TrainGraph(TrainConnection.trainConnections);
             CustomerCatalog customerCatalog = new CustomerCatalog();
@@ -28,7 +34,6 @@ public class driver {
                 case 3:
                 System.out.println("\nExisting Customers' Bookings:");
                 System.out.println("==============================");
-                System.out.println("test1");
                 System.out.println("Please Enter your Name:");
                 String name = in.nextLine();
                 System.out.println("Please Enter your ID:");
@@ -46,6 +51,67 @@ public class driver {
         }
     }
     
+    public static void loader() {
+            CustomerCatalog customerCatalog = new CustomerCatalog();
+
+            String sql =
+            "SELECT c.name, c.age, c.identifier, t.route " +
+            "FROM Customer c " +
+            "JOIN Trip t ON c.customer_id = t.customer_id";
+
+
+            try (Connection conn = DBManager.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                ResultSet rs = stmt.executeQuery()) {
+
+                while (rs.next()) {
+                    String name = rs.getString("name");
+                    int age = rs.getInt("age");
+                    String identifier = rs.getString("identifier");
+                    String routeString = rs.getString("route");
+
+                    // Create or find the customer
+                    CustomerCatalog.Customer customer = customerCatalog.find(identifier, name);
+                    if (customer == null)
+                        customer = customerCatalog.add(name, identifier, age);
+
+                    // Build edges from the route string
+                    List<TrainConnection> edges = new ArrayList<>();
+                    if (routeString != null && !routeString.isEmpty()) {
+                        for (String id : routeString.split("\\|")) {
+                            for (TrainConnection tc : TrainConnection.trainConnections) {
+                                if (tc.getRouteID().equals(id.trim())) {
+                                    edges.add(tc);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // Build PathResult and Trip, then attach to customer
+                    if (!edges.isEmpty()) {
+                        TrainGraph.PathResult path = new TrainGraph.PathResult(
+                                edges.get(0).departureCity,
+                                edges.get(edges.size() - 1).arrivalCity,
+                                edges
+                        );
+
+                        ArrayList<CustomerCatalog.Customer> list = new ArrayList<>();
+                        list.add(customer);
+
+                        Trip trip = list.get(0).bookTrip(list, path);
+                        for (CustomerCatalog.Customer c : list) {
+                            c.addTrip(trip);
+                        }
+                    }
+                }
+
+                System.out.println("Trips successfully rebuilt and assigned to customers!");
+
+            } catch (SQLException e) {
+                System.out.println("Error rebuilding trips: " + e.getMessage());
+            }
+        }
 
     private static void listCities(TrainGraph g) {
         ArrayList<String> cities = new ArrayList<>(g.getAllCities());
@@ -180,10 +246,18 @@ public class driver {
     }
 
     // Create the trip in memory
-    Trip trip = customerCatalog.bookTrip(allCustomers, chosenPath);
-    customerCatalog.saveTripToDB(trip, allCustomers.get(0), chosenPath); // save trip to DB
-    for (Reservation reservation : trip.getReservations()) {
-        customerCatalog.saveReservationToDB(reservation,trip.getId()); // save each reservation to DB
+    Trip trip = allCustomers.get(0).bookTrip(allCustomers, chosenPath);
+    for (CustomerCatalog.Customer c : allCustomers) {
+        c.addTrip(trip);
+    }
+
+    // Save the trip to DB
+    customerCatalog.saveTripToDB(trip, allCustomers.get(0), chosenPath);
+
+    // Save reservations for each passenger
+    for (CustomerCatalog.Customer c : allCustomers) {
+        Reservation reservation = new Reservation(c, chosenPath);
+        customerCatalog.saveReservationToDB(reservation, 1); // use real trip_id later
     }
 
     for (CustomerCatalog.Customer c : allCustomers) {

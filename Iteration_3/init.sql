@@ -24,9 +24,11 @@ CREATE TABLE Trip (
     origin VARCHAR(100) NOT NULL,
     destination VARCHAR(100) NOT NULL,
     path_description TEXT,
+    route VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (customer_id) REFERENCES Customer(customer_id) ON DELETE CASCADE
 );
+
 
 -- Create Reservation table
 CREATE TABLE Reservation (
@@ -49,3 +51,4 @@ DESCRIBE Trip;
 DESCRIBE Reservation;
 
 SELECT 'Database tables initialized successfully!' AS Status;
+
