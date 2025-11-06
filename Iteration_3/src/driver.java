@@ -27,18 +27,16 @@ public class driver {
                     break;
                 case 3:
                 System.out.println("\nExisting Customers' Bookings:");
-                    System.out.println("==============================");
-                    System.out.println("Please Enter your Name:");
-                    String name = in.nextLine();
-                    System.out.println("Please Enter your ID:");
-                    String id = in.nextLine();
-                    CustomerCatalog.Customer existingCustomer = customerCatalog.find(id, name);
-                    if (existingCustomer != null) {
-                        customerCatalog.viewTrip(existingCustomer); 
-                    } else {
-                        System.out.println("Customer not found.");
-                    }
-                    break;
+                System.out.println("==============================");
+                System.out.println("test1");
+                System.out.println("Please Enter your Name:");
+                String name = in.nextLine();
+                System.out.println("Please Enter your ID:");
+                String id = in.nextLine();
+                customerCatalog.viewTripFromDB(name, id);
+                break;
+
+
                 case 4:
                     System.out.println("Goodbye!");
                     return;

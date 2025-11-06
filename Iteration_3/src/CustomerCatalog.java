@@ -184,4 +184,47 @@ public class CustomerCatalog{
         return -1;
     }
 
+            public void viewTripFromDB(String name, String identifier) {
+            String sql = """
+                SELECT 
+                    c.name,
+                    c.identifier,
+                    t.trip_id,
+                    t.origin,
+                    t.destination,
+                    t.path_description
+                FROM Customer c
+                JOIN Trip t ON c.customer_id = t.customer_id
+                WHERE c.name = ? AND c.identifier = ?;
+            """;
+
+            try (Connection conn = DBManager.getConnection();
+                PreparedStatement ps = conn.prepareStatement(sql)) {
+
+                ps.setString(1, name);
+                ps.setString(2, identifier);
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    boolean found = false;
+                    while (rs.next()) {
+                        found = true;
+                        System.out.println("------------------------------");
+                        System.out.println("Customer: " + rs.getString("name"));
+                        System.out.println("Identifier: " + rs.getString("identifier"));
+                        System.out.println("Trip ID: " + rs.getInt("trip_id"));
+                        System.out.println("From: " + rs.getString("origin"));
+                        System.out.println("To: " + rs.getString("destination"));
+                        System.out.println("Path: " + rs.getString("path_description"));
+                    }
+                    if (!found) {
+                        System.out.println("No trips found for this customer.");
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+
     } 
