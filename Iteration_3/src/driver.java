@@ -102,11 +102,13 @@ public class driver {
 
         List<TrainGraph.PathResult> paths = g.pathsUpToTwoIntermediates(from, to, predicate);
 
+        paths.removeIf(p -> !allTrainsShareCommonDay(p.edges));
 
         if (paths == null || paths.isEmpty()) {
             System.out.println("\nNo trips found with ≤ 2 connections from " + from + " to " + to + ".");
             return;
         }
+
 
         boolean useFirstClass = false; // default sort by 2nd-class price
         List<TrainGraph.PathResult> shown = new ArrayList<>(paths);
@@ -366,9 +368,17 @@ public class driver {
 
         
         
+
     }
+ 
 
-    
+    private static boolean allTrainsShareCommonDay(List<TrainConnection> edges) {
+    EnumSet<DayOfWeek> common = EnumSet.allOf(DayOfWeek.class);
+    for (TrainConnection tc : edges) {
+        common.retainAll(tc.operatingDaysSet());
+        if (common.isEmpty()) return false; 
+    }
+    return true;
+}
 
-    
 }
