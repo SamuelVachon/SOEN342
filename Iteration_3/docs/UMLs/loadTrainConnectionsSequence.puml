@@ -1,0 +1,12 @@
+@startuml loadTrainConnectionsSequence
+actor User
+participant driver
+participant TrainGraph
+
+User -> driver : loadTrainConnectionsFromCSV(csv)
+driver -> TrainConnectionCatalog : trainConnections-:create(csv)
+loop line : csv
+    TrainConnectionCatalog -> TrainConnection : create(line)
+end
+driver -> TrainGraph : g-:create(trainConnections)
+@enduml

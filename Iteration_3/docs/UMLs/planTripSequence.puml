@@ -1,0 +1,19 @@
+@startuml planTripSequence
+actor User
+participant driver
+participant Predicate
+participant TrainGraph
+participant PathResultCatalog
+participant PathResult
+
+
+User -> driver :  planTrip(departureCity,arrivalCity,trainTypes,departureDays)
+driver->Predicate : predicate-:create(trainTypes,departureDays)
+driver -> TrainGraph : pathResults-:pathsUpToTwoIntermediates(from, to, predicate) 
+TrainGraph -> PathResultCatalog : pathResults-:create(from,to,predicate,trainConnections)
+
+loop
+    PathResultCatalog -> PathResult : create(edges)
+end
+
+@enduml
