@@ -35,3 +35,20 @@ In order to use this iteration of the code the user navigates to the path: `Iter
 Like for Iteration 1 the same core use cases are still the same, with the addition that on the main menu the user will also be able to view all made bookings with a given session. If the user chooses that option he will be prompted to proved the name and id of the costumer he whishes to see all the bookings for.
 when the user plans a trip he will also be able to book a trip from the results that he is given. If he chooses that option he will be prompted the number of bookings needed, the trip that it will be making the bookings for and the costumer's details. The user will provde a name, ID and age for each costumer.
 Once the booking is made the user will then be able to see the deatils of the booking wich include the trip information and the costumer's details.
+
+# Iteration 3  
+Contributions: All members contributed equally for the delivery of this iteration working using "Pair programming".  
+
+For this iteration of the project we only added the use of a DB for data persistance. All use cases remained unchanged therefore the program behaves just like it did for iteration 2.  
+
+For the DB we used a docker container. To run the program the user will have to navigate to the follwing path `Iteration_3/src` and use the makefile provided. 
+
+on a first run the user will have to run the following set of commands
+
+`make init-db`: this will initialize the DB for the user on a docker container. 
+
+`make start-db`: this will start the docker container of the DB
+
+`make run`: this will run the program if the user has initilized the DB and the container is up and running.  
+
+It is adviced for the user to go over the makefile to look at all the options available to run the program and handle the DB container.
