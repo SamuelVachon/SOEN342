@@ -1,9 +1,9 @@
 // TrainGraph.java
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 /**
  * Weighted train graph using full TrainConnection.
@@ -122,21 +122,79 @@ public class TrainGraph {
             return candidate;
         }
 
+        /**
+         * Advances a day of week by a given number of days.
+         */
+        private DayOfWeek advanceDays(DayOfWeek day, int daysToAdd) {
+            if (daysToAdd == 0) return day;
+            int newValue = ((day.getValue() - 1 + daysToAdd) % 7) + 1;
+            return DayOfWeek.of(newValue);
+        }
+
+        /**
+         * Formats day of week as 3-letter abbreviation (Mon, Tue, etc.).
+         */
+        private String formatDayOfWeek(DayOfWeek day) {
+            return day.name().substring(0, 3).charAt(0) + day.name().substring(1, 3).toLowerCase();
+        }
+
         @Override
         public String toString() {
-            String hops = edges.stream()
-                    .map((TrainConnection e) -> {
-                        long mins = e.tripDuration.toMinutes();
-                        long h = mins / 60, m = mins % 60;
-                        return String.format(
-                                "%s→%s[%s %s→%s %dh%02dm €%d/€%d]",
-                                e.departureCity, e.arrivalCity,
-                                e.getRouteID(), e.departureTime, e.arrivalTime,
-                                h, m,
-                                e.firstClassRate, e.secondClassRate);
-                    })
-                    .collect(Collectors.joining("  "));
+            if (edges.isEmpty()) return from + " ⇒ " + to + " (no path)";
 
+            StringBuilder sb = new StringBuilder();
+
+            // Pick a valid departure day from the first train's operating days
+            DayOfWeek startDay = edges.get(0).operatingDaysSet().iterator().next();
+
+            // Track timeline through the journey
+            long currentAbs = minutesOfDay(edges.get(0).departureTime);
+
+            for (int i = 0; i < edges.size(); i++) {
+                TrainConnection e = edges.get(i);
+
+                // Calculate departure time for this train
+                int depMin = minutesOfDay(e.departureTime);
+                long depAbs = alignToNextOrSame(currentAbs, depMin);
+                int depDayOffset = (int)(depAbs / 1440);
+
+                // Calculate arrival time
+                long travelMins = e.tripDuration.toMinutes();
+                long arrAbs = depAbs + travelMins;
+                int arrDayOffset = (int)(arrAbs / 1440);
+
+                // Calculate actual day of week
+                DayOfWeek depDay = advanceDays(startDay, depDayOffset);
+                DayOfWeek arrDay = advanceDays(startDay, arrDayOffset);
+
+                // Format train segment
+                long h = travelMins / 60, m = travelMins % 60;
+                sb.append(String.format(
+                    "%s→%s [%s | Dep: %s %s (Day %d) → Arr: %s %s (Day %d) | %dh%02dm | €%d/€%d]",
+                    e.departureCity, e.arrivalCity,
+                    e.getRouteID(),
+                    e.departureTime, formatDayOfWeek(depDay), depDayOffset,
+                    e.arrivalTime, formatDayOfWeek(arrDay), arrDayOffset,
+                    h, m,
+                    e.firstClassRate, e.secondClassRate
+                ));
+
+                // If there's a next connection, show layover
+                if (i < edges.size() - 1) {
+                    TrainConnection nextTrain = edges.get(i + 1);
+                    int nextDepMin = minutesOfDay(nextTrain.departureTime);
+                    long nextDepAbs = alignToNextOrSame(arrAbs, nextDepMin);
+                    long layoverMins = nextDepAbs - arrAbs;
+                    long layoverHours = layoverMins / 60;
+                    long layoverMinsPart = layoverMins % 60;
+
+                    sb.append(String.format(" → [LAYOVER: %dh%02dm] → ", layoverHours, layoverMinsPart));
+                }
+
+                currentAbs = arrAbs;
+            }
+
+            // Add summary
             long totalMins = totalDuration.toMinutes();
             long th = totalMins / 60, tm = totalMins % 60;
 
@@ -147,8 +205,8 @@ public class TrainGraph {
             }
 
             return String.format(
-                    "%s ⇒ %s | edges=%d, intermed=%d, total=%dh %02dm | total €%d/€%d | %s",
-                    from, to, edges.size(), intermediates(), th, tm, totalFirst, totalSecond, hops);
+                    "%s ⇒ %s | Total: %dh%02dm | €%d/€%d\n    %s",
+                    from, to, th, tm, totalFirst, totalSecond, sb.toString());
         }
     }
 

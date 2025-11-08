@@ -157,6 +157,10 @@ public class driver {
         System.out.println("Type 'all' for any day. Example: Mon,Tue or Fri-Sun");
         EnumSet<DayOfWeek> daysSelected = promptDays();           // empty set => no day restriction
 
+        System.out.println("\nWhat is the maximum layover time (in minutes) you're willing to wait at a connection?");
+        System.out.println("Type '0' for no limit. Example: 120 (for 2 hours)");
+        int maxLayoverMinutes = promptMaxLayover();
+
         // Build one predicate that enforces both day and train-type constraints
         Predicate<TrainConnection> predicate = (tc) -> {
             boolean typeOK = typesSelected.isEmpty() || typesSelected.contains(tc.trainType);
@@ -166,7 +170,13 @@ public class driver {
 
         List<TrainGraph.PathResult> paths = g.pathsUpToTwoIntermediates(from, to, predicate);
 
+        // Filter paths where all trains share at least one common operating day
         paths.removeIf(p -> !allTrainsShareCommonDay(p.edges));
+
+        // Filter paths based on maximum layover time
+        if (maxLayoverMinutes > 0) {
+            paths.removeIf(p -> hasExcessiveLayover(p, maxLayoverMinutes));
+        }
 
         if (paths == null || paths.isEmpty()) {
             System.out.println("\nNo trips found with ≤ 2 connections from " + from + " to " + to + ".");
@@ -352,6 +362,23 @@ public class driver {
         }
     }
 
+    private static int promptMaxLayover() {
+        while (true) {
+            System.out.print("Maximum layover (minutes): ");
+            String s = in.nextLine().trim();
+            try {
+                int minutes = Integer.parseInt(s);
+                if (minutes < 0) {
+                    System.out.println("Please enter a non-negative number (0 for no limit).");
+                    continue;
+                }
+                return minutes;
+            } catch (NumberFormatException e) {
+                System.out.println("Please enter a valid number.");
+            }
+        }
+    }
+
     // ---------- Price helper ----------
     private static int sumPrice(TrainGraph.PathResult p, boolean firstClass) {
         int sum = 0;
@@ -440,9 +467,54 @@ public class driver {
     EnumSet<DayOfWeek> common = EnumSet.allOf(DayOfWeek.class);
     for (TrainConnection tc : edges) {
         common.retainAll(tc.operatingDaysSet());
-        if (common.isEmpty()) return false; 
+        if (common.isEmpty()) return false;
     }
     return true;
 }
+
+    /**
+     * Checks if any layover in the path exceeds the maximum allowed time.
+     * Returns true if any single layover is too long.
+     */
+    private static boolean hasExcessiveLayover(TrainGraph.PathResult path, int maxLayoverMinutes) {
+        List<TrainConnection> edges = path.edges;
+        if (edges.size() <= 1) return false; // Direct route, no layover
+
+        long curAbs = minutesOfDay(edges.get(0).departureTime);
+
+        for (int i = 0; i < edges.size(); i++) {
+            TrainConnection currentTrain = edges.get(i);
+            int depMin = minutesOfDay(currentTrain.departureTime);
+            long depAbs = alignToNextOrSame(curAbs, depMin);
+            long travel = currentTrain.tripDuration.toMinutes();
+            long arrivalAbs = depAbs + travel;
+
+            // If there's a next train, check the layover time
+            if (i < edges.size() - 1) {
+                TrainConnection nextTrain = edges.get(i + 1);
+                int nextDepMin = minutesOfDay(nextTrain.departureTime);
+                long nextDepAbs = alignToNextOrSame(arrivalAbs, nextDepMin);
+
+                long layoverMinutes = nextDepAbs - arrivalAbs;
+                if (layoverMinutes > maxLayoverMinutes) {
+                    return true; // This layover is too long
+                }
+            }
+
+            curAbs = arrivalAbs;
+        }
+        return false;
+    }
+
+    private static int minutesOfDay(java.time.LocalTime t) {
+        return t.getHour() * 60 + t.getMinute();
+    }
+
+    private static long alignToNextOrSame(long currentAbs, int targetMinOfDay) {
+        long day = currentAbs / 1440; // minutes in a day
+        long candidate = day * 1440 + targetMinOfDay;
+        while (candidate < currentAbs) candidate += 1440;
+        return candidate;
+    }
 
 }

@@ -73,4 +73,12 @@ db-status:
 clean:
 	rm -f *.class
 
-.PHONY: all compile run run-auto init-db check-db clean-db start-db stop-db restart-db db-status clean
+# Run test suite for layover and day-of-week validation
+test: compile
+	@echo "Running layover and day-of-week validation tests..."
+	@echo ""
+	$(JAVA) TestLayoverAndDays
+	@echo ""
+	@echo "Test suite completed!"
+
+.PHONY: all compile run run-auto init-db check-db clean-db start-db stop-db restart-db db-status clean test
