@@ -1,26 +1,31 @@
 @startuml class diagram
 set namespaceSeparator .
 skinparam classAttributeIconSize 0
+skinparam linetype ortho
 
 class driver {
-  - in: Scanner
-  + main(args: String[]): void
-  - listCities(g: TrainGraph): void
-  - planTripUI(g: TrainGraph): void
-  - promptCity(cities: Set<String>, label: String, g: TrainGraph): String
-  - readInt(): int
-  - promptTypeTrains(): Set<String>
-  - promptDays(): EnumSet<DayOfWeek>
-  - sumPrice(p: TrainGraph.PathResult, firstClass: boolean): int
-  - runsOnAny(tc: TrainConnection, selected: EnumSet<DayOfWeek>): boolean
-  - operatingDays(spec: String): EnumSet<DayOfWeek>
-  - daysRange(range: String): EnumSet<DayOfWeek>
-  - tokenToDay(tok: String): DayOfWeek
-  - parseDaysSpec(s: String): EnumSet<DayOfWeek>
+  - {static} in: Scanner
+  __
+  + {static} main(args: String[]): void
+  - {static} listCities(g: TrainGraph): void
+  - {static} planTripUI(g: TrainGraph): void
+  - {static} bookTrip(customerCatalog: CustomerCatalog, chosenPath: TrainGraph.PathResult): void
+  - {static} printPaths(list: List<TrainGraph.PathResult>, firstClass: boolean): void
+  - {static} promptCity(cities: Set<String>, label: String, g: TrainGraph): String
+  - {static} readInt(): int
+  - {static} promptTypeTrains(): Set<String>
+  - {static} promptDays(): EnumSet<DayOfWeek>
+  - {static} sumPrice(p: TrainGraph.PathResult, firstClass: boolean): int
+  - {static} runsOnAny(tc: TrainConnection, selected: EnumSet<DayOfWeek>): boolean
+  - {static} operatingDays(spec: String): EnumSet<DayOfWeek>
+  - {static} daysRange(range: String): EnumSet<DayOfWeek>
+  - {static} tokenToDay(tok: String): DayOfWeek
+  - {static} parseDaysSpec(s: String): EnumSet<DayOfWeek>
 }
 
 class CustomerCatalog {
-  - static customers: ArrayList<Customer>
+  - {static} customers: ArrayList<Customer>
+  __
   + CustomerCatalog()
   + bookTrip(clients: ArrayList<Customer>, pathResult: TrainGraph.PathResult): void
   + add(name: String, id: String, age: int): Customer
@@ -34,6 +39,7 @@ class "CustomerCatalog.Customer" as Customer {
   - id: String
   - age: int
   - trips: ArrayList<Trip>
+  __
   + Customer(name: String, id: String, age: int)
   + bookTrip(clients: ArrayList<CustomerCatalog.Customer>, pathResult: TrainGraph.PathResult): Trip
   + addTrip(trip: Trip): void
@@ -46,15 +52,31 @@ class "CustomerCatalog.Customer" as Customer {
 
 class Trip {
   - id: int
-  - static counter: int
+  - {static} counter: int
   - reservations: ArrayList<Reservation>
+  __
   + Trip(clients: ArrayList<CustomerCatalog.Customer>, pathResult: TrainGraph.PathResult)
   + getReservations(): ArrayList<Reservation>
   + toString(): String
 }
 
+class Reservation {
+  - {static} counter: int
+  - customer: CustomerCatalog.Customer
+  - id: int
+  - pathResult: TrainGraph.PathResult
+  __
+  + Reservation(client: CustomerCatalog.Customer, pathResult: TrainGraph.PathResult)
+  + getCustomer(): CustomerCatalog.Customer
+  + setCustomer(customer: CustomerCatalog.Customer): void
+  + getId(): int
+  + getPathResult(): TrainGraph.PathResult
+  + setPathResult(pathResult: TrainGraph.PathResult): void
+  + toString(): String
+}
+
 class TrainConnection {
-  + static trainConnections: ArrayList<TrainConnection>
+  + {static} trainConnections: ArrayList<TrainConnection>
   - routeID: String
   + departureCity: String
   + arrivalCity: String
@@ -66,19 +88,21 @@ class TrainConnection {
   + firstClassRate: int
   + secondClassRate: int
   + tripDuration: Duration
+  __
   + getRouteID(): String
-  + static loadTrainConnectionsFromCSV(filePath: String): void
-  + static getTrainTypes(): Set<String>
-  - static computeDuration(dep: LocalTime, arr: LocalTime, offset: int): Duration
-  - static parseCsvLine(line: String): ArrayList<String>
-  - static cleanTime(raw: String): String
-  - static extractDayOffset(raw: String): int
-  - static loadDays(str: String): String
+  + {static} loadTrainConnectionsFromCSV(filePath: String): void
+  + {static} getTrainTypes(): Set<String>
+  - {static} computeDuration(dep: LocalTime, arr: LocalTime, offset: int): Duration
+  - {static} parseCsvLine(line: String): ArrayList<String>
+  - {static} cleanTime(raw: String): String
+  - {static} extractDayOffset(raw: String): int
+  - {static} loadDays(str: String): String
   + toString(): String
 }
 
 class TrainGraph {
   - graph: Map<String, Map<String, List<TrainConnection>>>
+  __
   + TrainGraph(connections: List<TrainConnection>)
   + getAllCities(): Set<String>
   + getConnections(from: String, to: String): List<TrainConnection>
@@ -88,13 +112,8 @@ class TrainGraph {
   + allPathsUpToTwoIntermediates(): Map<String, Map<String, List<PathResult>>>
   + allPathsUpToTwoIntermediates(edgeFilter: Predicate<TrainConnection>): Map<String, Map<String, List<PathResult>>>
   + pathsUpToTwoIntermediates(from: String, to: String, edgeFilter: Predicate<TrainConnection>): List<PathResult>
-  - dfsCollectFiltered(origin: String, current: String, edgesRem: int,
-      visited: Set<String>, path: Deque<TrainConnection>,
-      edgeFilter: Predicate<TrainConnection>,
-      sink: Map<String, Map<String, List<PathResult>>>): void
-  - dfsCollect(origin: String, current: String, edgesRem: int,
-      visited: Set<String>, path: Deque<TrainConnection>,
-      sink: Map<String, Map<String, List<PathResult>>>): void
+  - dfsCollectFiltered(origin: String, current: String, edgesRem: int, visited: Set<String>, path: Deque<TrainConnection>, edgeFilter: Predicate<TrainConnection>, sink: Map<String, Map<String, List<PathResult>>>): void
+  - dfsCollect(origin: String, current: String, edgesRem: int, visited: Set<String>, path: Deque<TrainConnection>, sink: Map<String, Map<String, List<PathResult>>>): void
   + fastestPathPerPairUpToTwoIntermediates(): Map<String, Map<String, PathResult>>
   + toString(): String
 }
@@ -104,20 +123,24 @@ class "TrainGraph.PathResult" as PathResult {
   + to: String
   + edges: List<TrainConnection>
   + totalDuration: Duration
-  - static computeTotalWithWaits(edges: List<TrainConnection>): Duration
-  - static minutesOfDay(t: LocalTime): int
-  - static alignToNextOrSame(currentAbs: long, targetMinOfDay: int): long
+  __
+  + PathResult(from: String, to: String, edges: List<TrainConnection>)
+  + intermediates(): int
+  - {static} computeTotalWithWaits(edges: List<TrainConnection>): Duration
+  - {static} minutesOfDay(t: LocalTime): int
+  - {static} alignToNextOrSame(currentAbs: long, targetMinOfDay: int): long
   + toString(): String
 }
 
-driver ..> TrainGraph
-driver ..> CustomerCatalog
-TrainGraph *-- PathResult
-PathResult ..> TrainConnection
-CustomerCatalog *-- Customer
-CustomerCatalog ..> Trip
-Trip ..> CustomerCatalog.Customer
-Trip ..> TrainGraph.PathResult
-Trip *-- Reservation
+driver --> TrainGraph : uses
+driver --> CustomerCatalog : uses
+TrainGraph +-- PathResult
+PathResult --> TrainConnection : includes
+CustomerCatalog +-- Customer
+Customer --> Trip : has
+Trip *-- Reservation : contains
+Reservation --> Customer : for
+Reservation --> PathResult : books
+TrainGraph --> TrainConnection : uses
 
 @enduml

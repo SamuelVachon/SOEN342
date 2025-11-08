@@ -1,20 +1,12 @@
 @startuml domain model
 skinparam classAttributeIconSize 0
 
-object City {
-  name: String
-}
-
-object CityCatalog{
-
-}
-
-object TrainConnectionCatalog{
-
-}
 
 object TrainConnection {
+  trainConnections
   routeID
+  departureCity
+  arrivalCity
   departureTime
   arrivalTime
   arrivalDayOffset
@@ -27,68 +19,57 @@ object TrainConnection {
 
 
 object TrainGraph {
-
+  graph
 }
 
-object PathResultCatalog{
-
-}
 
 object PathResult {
-  Duration
+  from
+  to
+  edges
+  totalDuration
 }
 
-object customerCatalog{
 
-}
 
 object Customer{
-  String name
-  String id
-  int age
-}
-
-object tripCatalog{
-
+  name
+  id
+  age
+  trips
 }
 
 object Trip{
-
-}
-
-object reservationCatalog{
-
-}
-
-object reservation{
-  int id
+  id
+  counter
+  reservations
 }
 
 object driver{
-
+  in
 }
 
-driver "1" -- "1" TrainGraph
-driver "1" -- "1" customerCatalog
-customerCatalog  *-- Customer
-Customer "1" -- "1" tripCatalog
-tripCatalog *-- Trip
-Trip "1" -- "1" reservationCatalog
-reservationCatalog *-- reservation
-reservation "1" -- "1" Customer
-reservation "1" -- "1" PathResult
+object CustomerCatalog{
+  customers
+}
 
-PathResultCatalog *-- PathResult
-TrainConnectionCatalog *-- TrainConnection
-CityCatalog *-- City
-City "1" -- "*" TrainConnection : departure
-City "1" -- "*" TrainConnection : arrival
-City "1" -- "*" PathResult : departure
-City "1" -- "*" PathResult : arrival
-TrainGraph "1" --  "1" TrainConnectionCatalog
-TrainGraph "1" --  "1" PathResultCatalog
-TrainGraph "1" --  "1" CityCatalog
-PathResult "1" *-- "1..3" TrainConnection
+object Reservation{
+  counter
+  customer
+  id
+  pathResult
+}
+
+driver "1" --> "1" TrainGraph : uses
+driver "1" --> "1" CustomerCatalog : uses
+CustomerCatalog +-- Customer
+Customer "1" --> "*" Trip : has
+Trip "1" *--> "*" Reservation : contains
+Reservation "*" --> "1" Customer : for
+Reservation "*" --> "1" PathResult : books
+TrainGraph +-- PathResult
+TrainGraph "1" --> "*" TrainConnection : uses
+PathResult "1" *--> "1..3" TrainConnection : includes
 
 
 note right of TrainConnection
@@ -98,4 +79,5 @@ daysOfOperation examples:
 - "Fri-Sun" (wrap allowed)
 Trip duration reflects arrivalDayOffset.
 end note
+
 @enduml
