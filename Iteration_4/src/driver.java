@@ -11,6 +11,10 @@ public class driver {
     private static final Scanner in = new Scanner(System.in);
 
     public static void main(String[] args) {
+        // Initialize counters from database before anything else
+        Trip.initializeCounter();
+        Reservation.initializeCounter();
+
         loader();
     String csv = (args.length > 0) ? args[0] : "Iteration_3/eu_rail_network.csv";
         TrainConnection.loadTrainConnectionsFromCSV(csv);
@@ -34,11 +38,11 @@ public class driver {
                 case 3:
                 System.out.println("\nExisting Customers' Bookings:");
                 System.out.println("==============================");
-                System.out.println("Please Enter your Name:");
-                String name = in.nextLine();
+                System.out.println("Please Enter your Last Name:");
+                String lastName = in.nextLine();
                 System.out.println("Please Enter your ID:");
                 String id = in.nextLine();
-                customerCatalog.viewTripFromDB(name, id);
+                customerCatalog.viewTripFromDB(lastName, id);
                 break;
 
 
@@ -55,7 +59,7 @@ public class driver {
             CustomerCatalog customerCatalog = new CustomerCatalog();
 
             String sql =
-            "SELECT c.name, c.age, c.identifier, t.route " +
+            "SELECT c.first_name, c.last_name, c.age, c.identifier, t.route " +
             "FROM Customer c " +
             "JOIN Trip t ON c.customer_id = t.customer_id";
 
@@ -65,15 +69,16 @@ public class driver {
                 ResultSet rs = stmt.executeQuery()) {
 
                 while (rs.next()) {
-                    String name = rs.getString("name");
+                    String firstName = rs.getString("first_name");
+                    String lastName = rs.getString("last_name");
                     int age = rs.getInt("age");
                     String identifier = rs.getString("identifier");
                     String routeString = rs.getString("route");
 
                     // Create or find the customer
-                    CustomerCatalog.Customer customer = customerCatalog.find(identifier, name);
+                    CustomerCatalog.Customer customer = customerCatalog.find(identifier, firstName, lastName);
                     if (customer == null)
-                        customer = customerCatalog.add(name, identifier, age);
+                        customer = customerCatalog.add(firstName, lastName, identifier, age);
 
                     // Build edges from the route string
                     List<TrainConnection> edges = new ArrayList<>();
@@ -100,6 +105,7 @@ public class driver {
                         list.add(customer);
 
                         Trip trip = list.get(0).bookTrip(list, path);
+                        trip.setFromPreviousSession(true); // Mark as loaded from database
                         for (CustomerCatalog.Customer c : list) {
                             c.addTrip(trip);
                         }
@@ -186,7 +192,6 @@ public class driver {
 
         boolean useFirstClass = false; // default sort by 2nd-class price
         List<TrainGraph.PathResult> shown = new ArrayList<>(paths);
-        boolean UserisBooking = false;
         while (true) {
             System.out.println("\n=== Trips " + from + " → " + to + " (≤2 connections) ===");
             printPaths(shown, useFirstClass);
@@ -240,19 +245,49 @@ public class driver {
     ArrayList<CustomerCatalog.Customer> allCustomers = new ArrayList<>();
     for (int i = 0; i < numTravellers; i++) {
         System.out.println("\nTraveller " + (i + 1) + ":");
-        System.out.print("Name: ");
-        String name = in.nextLine();
-        System.out.print("ID: ");
-        String id = in.nextLine();
-        System.out.print("Age: ");
-        int age = readInt();
 
-        CustomerCatalog.Customer customerTemp = customerCatalog.find(id, name);
-    if (customerTemp == null) {
-        customerTemp = customerCatalog.add(name, id, age);
-        customerCatalog.saveCustomerToDB(customerTemp); //  save customer to DB
-    }
-    allCustomers.add(customerTemp);
+        CustomerCatalog.Customer customerTemp = null;
+        boolean customerConfirmed = false;
+
+        while (!customerConfirmed) {
+            System.out.print("ID: ");
+            String id = in.nextLine();
+
+            // Check if customer exists in DB
+            customerTemp = customerCatalog.findCustomerByIdFromDB(id);
+
+            if (customerTemp != null) {
+                // Customer found, display info and ask for confirmation
+                System.out.println("\nCustomer found:");
+                System.out.println("Name: " + customerTemp.getFullName());
+                System.out.println("Age: " + customerTemp.getAge());
+                System.out.println("ID: " + customerTemp.getId());
+                System.out.print("\nIs this the correct customer? (yes/no): ");
+                String confirmation = in.nextLine().trim().toLowerCase();
+
+                if (confirmation.equals("yes") || confirmation.equals("y")) {
+                    customerConfirmed = true;
+                } else {
+                    System.out.println("\nThat was not the correct customer. Please try again.");
+                    // Loop back to ask for ID again, maintaining order: ID, First Name, Last Name, Age
+                }
+            } else {
+                // Customer not found, ask for full information
+                System.out.println("Customer not found. Please enter the information:");
+                System.out.print("First Name: ");
+                String firstName = in.nextLine();
+                System.out.print("Last Name: ");
+                String lastName = in.nextLine();
+                System.out.print("Age: ");
+                int age = readInt();
+
+                customerTemp = customerCatalog.add(firstName, lastName, id, age);
+                customerCatalog.saveCustomerToDB(customerTemp);
+                customerConfirmed = true;
+            }
+        }
+
+        allCustomers.add(customerTemp);
     }
 
     // Create the trip in memory

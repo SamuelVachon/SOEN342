@@ -11,7 +11,8 @@ DROP TABLE IF EXISTS Customer;
 -- Create Customer table
 CREATE TABLE Customer (
     customer_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
     age INT NOT NULL,
     identifier VARCHAR(50) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -34,7 +35,8 @@ CREATE TABLE Trip (
 CREATE TABLE Reservation (
     reservation_id INT AUTO_INCREMENT PRIMARY KEY,
     trip_id INT NOT NULL,
-    passenger_name VARCHAR(100) NOT NULL,
+    passenger_first_name VARCHAR(50) NOT NULL,
+    passenger_last_name VARCHAR(50) NOT NULL,
     passenger_age INT NOT NULL,
     passenger_id VARCHAR(50) NOT NULL,
     ticket_number VARCHAR(100) NOT NULL,

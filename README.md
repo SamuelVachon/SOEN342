@@ -51,4 +51,21 @@ on a first run the user will have to run the following set of commands
 
 `make run`: this will run the program if the user has initilized the DB and the container is up and running.  
 
+It is adviced for the user to go over the makefile to look at all the options available to run the program and handle the DB container.  
+
+# Iteration 4  
+Contributions: All members contributed equally for the delivery of this iteration working using "Pair programming".  
+
+For this iteration of the project we went over the use cases and fixed any issues that we found. The system works the same as for iteratoin 3 but better follows the requirements given for the project. 
+
+For the DB we used a docker container. To run the program the user will have to navigate to the follwing path `Iteration_4/src` and use the makefile provided. 
+
+on a first run the user will have to run the following set of commands
+
+`make init-db`: this will initialize the DB for the user on a docker container. 
+
+`make start-db`: this will start the docker container of the DB
+
+`make run`: this will run the program if the user has initilized the DB and the container is up and running.  
+
 It is adviced for the user to go over the makefile to look at all the options available to run the program and handle the DB container.
