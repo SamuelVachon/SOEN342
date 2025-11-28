@@ -1,0 +1,83 @@
+@startuml domain model
+skinparam classAttributeIconSize 0
+
+
+object TrainConnection {
+  trainConnections
+  routeID
+  departureCity
+  arrivalCity
+  departureTime
+  arrivalTime
+  arrivalDayOffset
+  trainType
+  daysOfOperation
+  firstClassRate
+  secondClassRate
+  tripDuration
+}
+
+
+object TrainGraph {
+  graph
+}
+
+
+object PathResult {
+  from
+  to
+  edges
+  totalDuration
+}
+
+
+
+object Customer{
+  name
+  id
+  age
+  trips
+}
+
+object Trip{
+  id
+  counter
+  reservations
+}
+
+object driver{
+
+}
+
+object CustomerCatalog{
+  customers
+}
+
+object Reservation{
+  counter
+  customer
+  id
+  pathResult
+}
+
+driver "1" --> "1" TrainGraph : uses
+driver "1" --> "1" CustomerCatalog : uses
+CustomerCatalog +-- Customer
+Customer "1" --> "*" Trip : has
+Trip "1" *--> "*" Reservation : contains
+Reservation "*" --> "1" Customer : for
+Reservation "*" --> "1" PathResult : books
+TrainGraph +-- PathResult
+TrainGraph "1" --> "*" TrainConnection : uses
+PathResult "1" *--> "1..3" TrainConnection : includes
+
+
+note right of TrainConnection
+daysOfOperation examples:
+- "Daily"
+- "Mon,Wed,Fri"
+- "Fri-Sun" (wrap allowed)
+Trip duration reflects arrivalDayOffset.
+end note
+
+@enduml
