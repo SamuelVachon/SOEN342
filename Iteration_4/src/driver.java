@@ -296,20 +296,32 @@ public class driver {
         c.addTrip(trip);
     }
 
-    // Save the trip to DB
-    customerCatalog.saveTripToDB(trip, allCustomers.get(0), chosenPath);
-
-    // Save reservations for each passenger
+    // Save the trip to DB for ALL customers
     for (CustomerCatalog.Customer c : allCustomers) {
-        Reservation reservation = new Reservation(c, chosenPath);
-        customerCatalog.saveReservationToDB(reservation, 1); // use real trip_id later
+        int tripId = customerCatalog.saveTripToDB(trip, c, chosenPath);
+
+        // Save all reservations using the actual trip_id from database
+        if (tripId > 0) {
+            for (Reservation reservation : trip.getReservations()) {
+                customerCatalog.saveReservationToDB(reservation, tripId);
+            }
+        }
     }
 
-    for (CustomerCatalog.Customer c : allCustomers) {
+    System.out.println("\n\n========================================");
+    System.out.println("BOOKING CONFIRMATION FOR ALL TRAVELERS");
+    System.out.println("========================================");
+
+    for (int i = 0; i < allCustomers.size(); i++) {
+        CustomerCatalog.Customer c = allCustomers.get(i);
+        System.out.println("\n--- TRAVELER " + (i + 1) + " ---");
         customerCatalog.viewTrip(c);
+        if (i < allCustomers.size() - 1) {
+            System.out.println("\n========================================");
+        }
     }
 
-    System.out.println("\nTrip booked and saved successfully!");
+    System.out.println("\n\nTrip booked and saved successfully!");
     System.out.println("Press Enter to go back to menu...");
     in.nextLine();
 }

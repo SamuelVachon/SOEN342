@@ -190,11 +190,10 @@ public class CustomerCatalog{
         }
     }
 
-    public void saveTripToDB(Trip trip, Customer customer, TrainGraph.PathResult path) {
-        String sql = "INSERT INTO Trip (customer_id, origin, destination, path_description) VALUES (?, ?, ?, ?)";
+    public int saveTripToDB(Trip trip, Customer customer, TrainGraph.PathResult path) {
+        String sql = "INSERT INTO Trip (customer_id, origin, destination, path_description, route) VALUES (?, ?, ?, ?, ?)";
 
-        try (Connection conn = DBManager.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DBManager.getConnection()) {
 
             // Find customer_id from DB
             String lookup = "SELECT customer_id FROM Customer WHERE identifier=? LIMIT 1";
@@ -204,19 +203,43 @@ public class CustomerCatalog{
                 if (rs.next()) {
                     int customerId = rs.getInt("customer_id");
 
-                    stmt.setInt(1, customerId);
-                    stmt.setString(2, path.edges.get(0).departureCity);
-                    stmt.setString(3, path.edges.get(path.edges.size() - 1).arrivalCity);
-                    stmt.setString(4, path.toString());
-                    stmt.executeUpdate();
+                    // Build route string (pipe-separated route IDs)
+                    StringBuilder routeBuilder = new StringBuilder();
+                    for (int i = 0; i < path.edges.size(); i++) {
+                        routeBuilder.append(path.edges.get(i).getRouteID());
+                        if (i < path.edges.size() - 1) {
+                            routeBuilder.append("|");
+                        }
+                    }
 
-                    System.out.println(" Trip saved to DB for " + customer.getFullName());
+                    try (PreparedStatement stmt = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
+                        stmt.setInt(1, customerId);
+                        stmt.setString(2, path.edges.get(0).departureCity);
+                        stmt.setString(3, path.edges.get(path.edges.size() - 1).arrivalCity);
+                        stmt.setString(4, path.toString());
+                        stmt.setString(5, routeBuilder.toString());
+                        stmt.executeUpdate();
+
+                        // Get the auto-generated trip_id from database
+                        ResultSet generatedKeys = stmt.getGeneratedKeys();
+                        if (generatedKeys.next()) {
+                            int tripId = generatedKeys.getInt(1);
+                            System.out.println(" Trip saved to DB for " + customer.getFullName() + " with trip_id: " + tripId);
+                            return tripId;
+                        } else {
+                            System.out.println(" Could not retrieve generated trip_id");
+                            return -1;
+                        }
+                    }
                 } else {
                     System.out.println(" Could not find customer ID for " + customer.getFullName());
+                    return -1;
                 }
             }
         } catch (SQLException e) {
             System.out.println(" Could not save trip: " + e.getMessage());
+            e.printStackTrace();
+            return -1;
         }
     }
 
