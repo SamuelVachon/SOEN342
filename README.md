@@ -68,4 +68,6 @@ on a first run the user will have to run the following set of commands
 
 `make run`: this will run the program if the user has initilized the DB and the container is up and running.  
 
-It is adviced for the user to go over the makefile to look at all the options available to run the program and handle the DB container.
+It is adviced for the user to go over the makefile to look at all the options available to run the program and handle the DB container.  
+
+Link to the video showing how to use the system :https://youtu.be/Sq_YBgPC7Ag
