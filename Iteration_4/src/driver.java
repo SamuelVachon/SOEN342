@@ -243,6 +243,8 @@ public class driver {
     int numTravellers = readInt();
 
     ArrayList<CustomerCatalog.Customer> allCustomers = new ArrayList<>();
+    Set<String> usedIdsThisBooking = new HashSet<>();
+
     for (int i = 0; i < numTravellers; i++) {
         System.out.println("\nTraveller " + (i + 1) + ":");
 
@@ -250,8 +252,7 @@ public class driver {
         boolean customerConfirmed = false;
 
         while (!customerConfirmed) {
-            System.out.print("ID: ");
-            String id = in.nextLine();
+            String id = promptUniqueIntegerId(customerCatalog, usedIdsThisBooking);
 
             // Check if customer exists in DB
             customerTemp = customerCatalog.findCustomerByIdFromDB(id);
@@ -267,6 +268,7 @@ public class driver {
 
                 if (confirmation.equals("yes") || confirmation.equals("y")) {
                     customerConfirmed = true;
+                    usedIdsThisBooking.add(id);
                 } else {
                     System.out.println("\nThat was not the correct customer. Please try again.");
                     // Loop back to ask for ID again, maintaining order: ID, First Name, Last Name, Age
@@ -283,6 +285,7 @@ public class driver {
 
                 customerTemp = customerCatalog.add(firstName, lastName, id, age);
                 customerCatalog.saveCustomerToDB(customerTemp);
+                usedIdsThisBooking.add(id);
                 customerConfirmed = true;
             }
         }
@@ -356,6 +359,37 @@ public class driver {
             } catch (NumberFormatException e) {
                 System.out.print("Enter a number:  ");
             }
+        }
+    }
+
+    private static String promptUniqueIntegerId(CustomerCatalog customerCatalog, Set<String> usedIdsThisBooking) {
+        while (true) {
+            System.out.print("ID (integer): ");
+            String input = in.nextLine().trim();
+
+            // Validate that input is an integer
+            try {
+                Integer.parseInt(input);
+            } catch (NumberFormatException e) {
+                System.out.println("Error: ID must be an integer value. Please try again.");
+                continue;
+            }
+
+            // Check if ID was already used in this booking session
+            if (usedIdsThisBooking.contains(input)) {
+                System.out.println("Error: This ID was already used for another traveler in this booking. Please enter a different ID.");
+                continue;
+            }
+
+            // Check if ID already exists in database for a different customer
+            CustomerCatalog.Customer existingCustomer = customerCatalog.findCustomerByIdFromDB(input);
+            if (existingCustomer != null) {
+                // ID exists in database - this is fine, we'll confirm with the user later
+                return input;
+            }
+
+            // ID is unique and valid
+            return input;
         }
     }
 
