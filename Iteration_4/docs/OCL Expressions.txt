@@ -1,0 +1,15 @@
+OCL Expressions 
+
+Context:
+ CustomerCatalog::bookTrip(set(Customer): clients, PathResult: pathResult): Trip
+Pre: 
+clients -> forall(c: Customer | self.customers -> includes(c))
+Post:
+clients -> forall(c: Customer | c.trips.size() = c.trips.size()@pre +1)
+clients -> forall(c: Customer | c.trips -> exists(t: Trip | t.reservations -> forall(r: Reservation | r.pathResult = pathResult and clients -> includes(r.customer))))
+result = clients -> collect(trips) -> select(t: trip | t.reservations -> forall(r: Reservation | r.pathResult = pathResult and clients -> includes(r.customer)))
+
+
+Context: Reservation
+inv: CustomerCatalog.customers -> forall(c: Customer | c.trips -> forall(t: Trip | t.reservations -> forall(r: Reservation | (r.pathResult <> self.pathResult or r.customer <> self.customer) implies r.id <> self.id)))
+CustomerCatalog.customers -> includes(self.customer)
