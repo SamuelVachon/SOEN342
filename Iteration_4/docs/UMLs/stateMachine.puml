@@ -1,0 +1,43 @@
+@startuml
+
+[*] --> selectPath
+selectPath: do/ select path
+selectPath --> selectCustomer
+state selectCustomer{
+    [*] --> enterCustomerInfo
+    enterCustomerInfo: do/ enter customer info
+    state c <<choice>>
+    state d <<choice>>
+    enterCustomerInfo --> c
+    c --> existingCustomer : [existing customer]
+    c --> newCustomer : [new customer]
+    existingCustomer: do/ select existing customer
+    existingCustomer --> d
+    newCustomer: do/ create new customer
+    newCustomer: exit/ save customer to catalog
+    newCustomer --> d
+    d --> enterCustomerInfo : [another customer]
+    d --> scexit <<exitPoint>> : [no other customer]
+}
+
+scexit --> CreateTrip
+CreateTrip: do/ create trip
+state CreateTrip{
+    [*]->CreateReservation
+    CreateReservation: do/ create new reservation
+    CreateReservation: exit/ add reservation to the trip
+    state f <<choice>>
+    CreateReservation --> f
+    f --> CreateReservation : [another customer] 
+    f --> ctexit <<exitPoint>> : [no other customer]
+}
+
+state g <<choice>>
+ctexit --> addTrip
+addTrip: do/ add trip to customer
+addTrip --> g
+g --> addTrip : [another customer]
+g --> [*] : [no other customer]
+
+
+@enduml
